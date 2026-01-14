@@ -1,15 +1,20 @@
 import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { DrizzleService } from 'src/drizzle/drizzle.service';
 import * as bcrypt from 'bcryptjs';
 import { PasswordDto } from './dto/password.dto';
 import { TransactionalEmailsApi, SendSmtpEmail, TransactionalEmailsApiApiKeys } from '@getbrevo/brevo';
 import { envs } from 'src/config';
+import { UsuarioTable } from 'src/drizzle/schema/usuario';
+import { eq } from 'drizzle-orm';
 
 @Injectable()
 export class EmailService {
   private emailAPI: TransactionalEmailsApi;
+  private readonly db;
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(private readonly drizzleService: DrizzleService) {
+    this.db = drizzleService.getDb();
+    
     // Inicializar Brevo
     this.emailAPI = new TransactionalEmailsApi();
     this.emailAPI.setApiKey(
@@ -28,7 +33,6 @@ export class EmailService {
   }
 
   async sendVerificationEmail(email: string, verificationLink: string) {
-    
     const subject = 'Verificación de correo electrónico';
     const htmlContent = `
       <!DOCTYPE html>
@@ -44,7 +48,6 @@ export class EmailService {
             <td align="center">
               <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);">
                 
-                <!-- Header con degradado -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
                     <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600; letter-spacing: -0.5px;">
@@ -56,7 +59,6 @@ export class EmailService {
                   </td>
                 </tr>
                 
-                <!-- Contenido principal -->
                 <tr>
                   <td style="padding: 50px 40px;">
                     <h2 style="margin: 0 0 20px 0; color: #333333; font-size: 24px; font-weight: 600;">
@@ -67,7 +69,6 @@ export class EmailService {
                       Gracias por registrarte en <strong>EMPRESOFT PERU S.A.C</strong>. Para completar tu registro y activar tu cuenta, necesitamos que verifiques tu correo electrónico.
                     </p>
                     
-                    <!-- Botón de verificación -->
                     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 35px 0;">
                       <tr>
                         <td align="center">
@@ -78,7 +79,6 @@ export class EmailService {
                       </tr>
                     </table>
                     
-                    <!-- Advertencia de tiempo -->
                     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 30px 0; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 6px;">
                       <tr>
                         <td style="padding: 20px;">
@@ -89,14 +89,12 @@ export class EmailService {
                       </tr>
                     </table>
                     
-                    <!-- Información adicional -->
                     <p style="margin: 30px 0 0 0; color: #888888; font-size: 14px; line-height: 1.6;">
                       Si no creaste una cuenta con nosotros, puedes ignorar este correo de forma segura.
                     </p>
                   </td>
                 </tr>
                 
-                <!-- Footer -->
                 <tr>
                   <td style="background-color: #f8f9fa; padding: 30px 40px; border-top: 1px solid #e9ecef;">
                     <p style="margin: 0 0 10px 0; color: #666666; font-size: 13px; line-height: 1.5;">
@@ -115,7 +113,6 @@ export class EmailService {
                 
               </table>
               
-              <!-- Texto alternativo para el enlace -->
               <table width="600" cellpadding="0" cellspacing="0" border="0" style="margin-top: 20px;">
                 <tr>
                   <td style="padding: 0 20px;">
@@ -132,7 +129,7 @@ export class EmailService {
         </table>
       </body>
       </html>
-      `;
+    `;
     const emailData = this.createEmailData(email, subject, htmlContent);
 
     try {
@@ -145,19 +142,85 @@ export class EmailService {
     }
   }
 
-  // Enviar correo de verificación
   async sendUsuarioCredentials(email: string, password: string, nombreCompleto: string) {
     const subject = 'Credenciales de usuario - Aurora';
     const htmlContent = `
-      <p>Estimado(a) ${nombreCompleto},</p>
-      <p>Te hemos enviado tus credenciales para acceder a Aurora:</p>
-      <ul>
-        <li><strong>Correo electrónico:</strong> ${email}</li>
-        <li><strong>Contraseña:</strong> ${password}</li>
-      </ul>
-      <p>Por seguridad, te recomendamos cambiar tu contraseña en tu primer ingreso.</p>
-      <p>Atentamente,</p>
-      <p><strong>Empresoft Perú</strong></p>
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Credenciales de Usuario</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f4f7fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f4f7fa; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);">
+                
+                <tr>
+                  <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">
+                      EMPRESOFT PERU S.A.C
+                    </h1>
+                    <p style="margin: 10px 0 0 0; color: #e8e8ff; font-size: 14px;">
+                      Sistema Aurora
+                    </p>
+                  </td>
+                </tr>
+                
+                <tr>
+                  <td style="padding: 50px 40px;">
+                    <h2 style="margin: 0 0 20px 0; color: #333333; font-size: 24px;">
+                      Estimado(a) ${nombreCompleto},
+                    </h2>
+                    
+                    <p style="margin: 0 0 25px 0; color: #555555; font-size: 16px; line-height: 1.6;">
+                      Te hemos creado una cuenta en nuestro sistema Aurora. A continuación, encontrarás tus credenciales de acceso:
+                    </p>
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f8f9fa; border-radius: 8px; padding: 25px; margin: 25px 0;">
+                      <tr>
+                        <td>
+                          <p style="margin: 0 0 15px 0; color: #333333; font-size: 15px;">
+                            <strong style="color: #667eea;">Correo electrónico:</strong><br>
+                            <span style="color: #555555;">${email}</span>
+                          </p>
+                          <p style="margin: 0; color: #333333; font-size: 15px;">
+                            <strong style="color: #667eea;">Contraseña:</strong><br>
+                            <span style="color: #555555; font-family: monospace; background-color: #ffffff; padding: 5px 10px; border-radius: 4px; display: inline-block;">${password}</span>
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 30px 0; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 6px;">
+                      <tr>
+                        <td style="padding: 20px;">
+                          <p style="margin: 0; color: #856404; font-size: 14px; line-height: 1.5;">
+                            <strong>🔒 Recomendación de seguridad:</strong> Por tu seguridad, te recomendamos cambiar tu contraseña en tu primer ingreso al sistema.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+                
+                <tr>
+                  <td style="background-color: #f8f9fa; padding: 30px 40px; border-top: 1px solid #e9ecef;">
+                    <p style="margin: 0; color: #666666; font-size: 13px; line-height: 1.5;">
+                      Atentamente,<br>
+                      <strong style="color: #333333;">Empresoft Perú</strong>
+                    </p>
+                  </td>
+                </tr>
+                
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
     `;
 
     const emailData = this.createEmailData(email, subject, htmlContent);
@@ -173,7 +236,6 @@ export class EmailService {
   }
 
   async sendTwoFactorAuthenticateEmail(email: string, codigo: number) {
-
     const codigoString = codigo.toString();
       
     const subject = 'Autenticación de dos pasos';
@@ -252,29 +314,30 @@ export class EmailService {
     }
   }
 
-  // Verificar cuenta con el token
   async verificarCuenta(token: string) {
     try {
-      const usuario = await this.prisma.usuario.findFirst({
-        where: { token_verificacion_email: token },
-      });
+      const usuarioEncontrado = await this.db
+        .select()
+        .from(UsuarioTable)
+        .where(eq(UsuarioTable.token_verificacion_email, token))
+        .limit(1);
 
-      if (!usuario || usuario.verificado_email === true) {
+      if (!usuarioEncontrado || usuarioEncontrado.verificado_email === true) {
         throw new BadRequestException('Usuario no encontrado o ya verificado.');
       }
 
-      if (usuario.token_expiry_email < new Date()) {
+      if (usuarioEncontrado.token_expiry_email < new Date()) {
         throw new BadRequestException('El token ha expirado, solicite uno nuevo visitando su perfil de usuario.');
       }
 
-      await this.prisma.usuario.update({
-        where: { id: usuario.id },
-        data: {
+      await this.db
+        .update(UsuarioTable)
+        .set({
           verificado_email: true,
           token_verificacion_email: null,
           token_expiry_email: null,
-        },
-      });
+        })
+        .where(eq(UsuarioTable.id, usuarioEncontrado[0].id));
 
       return { message: 'Cuenta verificada exitosamente.' };
 
@@ -283,10 +346,7 @@ export class EmailService {
     }
   }
 
-  //Logica de recuperado de contraseña
-
   async enviarRecuperadoPassword(email: string, recuperacionClaveLink: string) {
-
     const subject = 'Solicitud para recuperar contraseña';
     const htmlContent = `
       <!DOCTYPE html>
@@ -300,17 +360,14 @@ export class EmailService {
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding: 60px 20px;">
           <tr>
             <td align="center">
-              <!-- Contenedor principal con sombra profunda -->
               <table width="650" cellpadding="0" cellspacing="0" border="0" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);">
                 
-                <!-- Header premium con logo ficticio -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #0074A8 0%, #13162A 100%); padding: 50px 40px; text-align: center; position: relative;">
                     
                     <table width="100%" cellpadding="0" cellspacing="0" border="0">
                       <tr>
                         <td align="center">
-                          <!-- Logo placeholder - puede ser reemplazado con imagen -->
                           <div style="width: 64px; height: 64px; margin: 0 auto 20px; background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); border-radius: 16px; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255, 255, 255, 0.3);">
                             <span style="font-size: 32px; color: #ffffff;">🏢</span>
                           </div>
@@ -327,11 +384,9 @@ export class EmailService {
                   </td>
                 </tr>
                 
-                <!-- Contenido principal con diseño mejorado -->
                 <tr>
                   <td style="padding: 55px 50px;">
                     
-                    <!-- Icono de seguridad grande -->
                     <div style="text-align: center; margin-bottom: 30px;">
                       <div style="width: 80px; height: 80px; margin: 0 auto; background: linear-gradient(135deg, #e6f4f9 0%, #cce8f4 100%); border-radius: 20px; display: inline-block; line-height: 80px; text-align: center; box-shadow: 0 8px 20px rgba(0, 116, 168, 0.15);">
                         <span style="font-size: 40px; vertical-align: middle;">🔐</span>
@@ -351,7 +406,6 @@ export class EmailService {
                         Para crear una nueva contraseña segura y recuperar el acceso a tu cuenta, haz clic en el siguiente botón:
                       </p>
                       
-                      <!-- Botón premium con efecto hover simulado -->
                       <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 30px 0;">
                         <tr>
                           <td align="center">
@@ -368,7 +422,6 @@ export class EmailService {
                       </p>
                     </div>
                     
-                    <!-- Advertencia de tiempo con diseño premium -->
                     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 30px 0; background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border-left: 5px solid #f59e0b; border-radius: 10px; overflow: hidden;">
                       <tr>
                         <td style="padding: 25px 30px; text-align: center;">
@@ -385,7 +438,6 @@ export class EmailService {
                       </tr>
                     </table>
                     
-                    <!-- Advertencia de seguridad premium -->
                     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px 0; background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border-left: 5px solid #ef4444; border-radius: 10px; overflow: hidden;">
                       <tr>
                         <td style="padding: 25px 30px;">
@@ -408,10 +460,8 @@ export class EmailService {
                       </tr>
                     </table>
                     
-                    <!-- Separador decorativo -->
                     <div style="margin: 40px 0; height: 1px; background: linear-gradient(90deg, transparent, #e5e7eb, transparent);"></div>
                     
-                    <!-- Consejos de seguridad -->
                     <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 10px; padding: 25px; border: 1px solid #bbf7d0;">
                       <tr>
                         <td>
@@ -431,7 +481,6 @@ export class EmailService {
                   </td>
                 </tr>
                 
-                <!-- Footer premium -->
                 <tr>
                   <td style="background: linear-gradient(135deg, #fafafa 0%, #f4f4f5 100%); padding: 40px 50px; border-top: 1px solid #e4e4e7;">
                     <table width="100%" cellpadding="0" cellspacing="0" border="0">
@@ -475,7 +524,7 @@ export class EmailService {
         message: 'Correo de recuperación de contraseña enviado exitosamente.',
       };
     } catch (error) {
-      throw new BadRequestException(
+     throw new BadRequestException(
         `No se pudo enviar el correo de recuperación de contraseña, ${error}`,
       );
     }
@@ -483,13 +532,13 @@ export class EmailService {
 
   async restablecerPassword(token: string, passwordDto: PasswordDto) {
     try {
-      const usuario = await this.prisma.usuario.findFirst({
-        where: {
-          token_verificacion_password: token,
-        },
-      });
+      const usuarioEncontrado = await this.db
+        .select()
+        .from(UsuarioTable)
+        .where(eq(UsuarioTable.token_verificacion_password, token))
+        .limit(1);
 
-      if (!usuario || usuario.token_verificacion_password !== token) {
+     if (!usuarioEncontrado || usuarioEncontrado.token_verificacion_password !== token) {
         throw new BadRequestException(
           'Token inválido o usuario no encontrado.',
         );
@@ -497,26 +546,24 @@ export class EmailService {
 
       // Verificar si el token ha expirado
       if (
-        usuario.token_expiry_password &&
-        usuario.token_expiry_password < new Date()
+        usuarioEncontrado.token_expiry_password &&
+        usuarioEncontrado.token_expiry_password < new Date()
       ) {
         throw new BadRequestException(
           'El token ha expirado, vuelva a solicitar nuevamente el restablecimiento de su contraseña.',
         );
       }
 
-      // Hashear la nueva contraseña
       const hashedPassword = await bcrypt.hash(passwordDto.password, 10);
 
-      // Actualizar la contraseña y limpiar el token de recuperación
-      await this.prisma.usuario.update({
-        where: { id: usuario.id },
-        data: {
+      await this.db
+        .update(UsuarioTable)
+        .set({
           password: hashedPassword,
           token_verificacion_password: null,
           token_expiry_password: null,
-        },
-      });
+        })
+        .where(eq(UsuarioTable.id, usuarioEncontrado[0].id));
 
       return { message: 'Contraseña actualizada con éxito.' };
     } catch (error) {

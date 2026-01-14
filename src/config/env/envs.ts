@@ -1,20 +1,20 @@
-import 'dotenv/config'
-import Joi from 'Joi'
+import 'dotenv/config';
+import * as Joi from 'joi';
 
-interface EnvVars{
-  BASE_URL: string,
-  DATABASE_URL: string,
-  BASE_FRONTEND_URL: string,
-  PORT: number,
-  EMAIL_USER: string,
-  API_RENIEC_DNI_URL: string,
-  TOKEN_RENIEC_DNI: string,
-  VERIFY_EMAIL_PATH: string,
-  JWT_SECRET: string,
-  RESET_PASSWORD_PATH: string,
+interface EnvVars {
+  BASE_URL: string;
+  DATABASE_URL: string;
+  BASE_FRONTEND_URL: string;
+  PORT: number;
+  EMAIL_USER: string;
+  API_RENIEC_DNI_URL: string;
+  TOKEN_RENIEC_DNI: string;
+  VERIFY_EMAIL_PATH: string;
+  JWT_SECRET: string;
+  RESET_PASSWORD_PATH: string;
   // Emails
-  BREVO_API_KEY: string,
-  EMAIL_EMPRESA: string
+  BREVO_API_KEY: string;
+  EMAIL_EMPRESA: string;
 }
 
 const envsSchema = Joi.object({
@@ -30,16 +30,16 @@ const envsSchema = Joi.object({
   RESET_PASSWORD_PATH: Joi.string().required(),
   //Emails
   BREVO_API_KEY: Joi.string().required(),
-  EMAIL_EMPRESA: Joi.string().required()
-}).unknown(true)
+  EMAIL_EMPRESA: Joi.string().required(),
+}).unknown(true);
 
-const {error, value} = envsSchema.validate( process.env )
+const validacion = envsSchema.validate(process.env);
 
-if(error){
-  throw new Error(`Config validation error ${error.message}`)
+if (validacion.error) {
+  throw new Error(`Config validation error ${validacion.error.message}`);
 }
 
-const envVars: EnvVars = value;
+const envVars: EnvVars = validacion.value as EnvVars;
 
 export const envs = {
   baseUrl: envVars.BASE_URL,
@@ -54,5 +54,5 @@ export const envs = {
   resetPassPath: envVars.RESET_PASSWORD_PATH,
   //Emails
   brevoApiKey: envVars.BREVO_API_KEY,
-  emailEmpresa: envVars.EMAIL_EMPRESA
-}
+  emailEmpresa: envVars.EMAIL_EMPRESA,
+};
