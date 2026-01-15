@@ -20,27 +20,42 @@ export class RolService {
   }
 
   //  Visualizar todos los roles de una empresa.
+  
   async findAllRol(paginationDto: PaginationDto, estado: boolean) {
-
     try {
+      const { page = 1, limit = 10 } = paginationDto;
+      const safeLimit = Math.min(100, Math.max(1, limit));
+      const safePage = Math.max(1, page);
 
-      const {page, limit} = paginationDto;
-
-      const safeLimit = limit ?? 10;
-      const safePage = page ?? 1;
-
-      const [{value}] = await this.db
-        .select({value: countDistinct(RolTable.id)})
+      const [{ total }] = await this.db
+        .select({ total: countDistinct(RolTable.id) })
         .from(RolTable)
-        .where(
-          eq(RolTable.estado_registro, estado)
-        )
+        .where(eq(RolTable.estado_registro, estado));
 
-      const totalPages = Number(value);
+      const lastPage = Math.ceil(total / safeLimit);
 
-      const lastPage = Math.ceil(totalPages / safeLimit);
+      const rolesPaginados = await this.db
+        .select({ id: RolTable.id })
+        .from(RolTable)
+        .where(eq(RolTable.estado_registro, estado))
+        .limit(safeLimit)
+        .offset((safePage - 1) * safeLimit);
 
-      const roles = await this.db
+      if (rolesPaginados.length === 0) {
+        return {
+          data: [],
+          pagination: {
+            total: total,
+            page: safePage,
+            limit: safeLimit,
+            lastPage: lastPage
+          }
+        };
+      }
+
+      const rolesIds = rolesPaginados.map(r => r.id);
+      
+      const rolesConAccesos = await this.db
         .select({
           ...getTableColumns(RolTable),
           acceso: {
@@ -49,57 +64,67 @@ export class RolService {
           }
         })
         .from(RolTable)
-        .innerJoin(Rol_Acceso_Table, eq(Rol_Acceso_Table.rol_id, RolTable.id))
-        .innerJoin(AccesoTable, eq(Rol_Acceso_Table.acceso_id, AccesoTable.id))
+        .leftJoin(Rol_Acceso_Table, eq(Rol_Acceso_Table.rol_id, RolTable.id))
+        .leftJoin(AccesoTable, eq(Rol_Acceso_Table.acceso_id, AccesoTable.id))
         .where(
-          eq(RolTable.estado_registro, estado)
+          and(
+            eq(RolTable.estado_registro, estado),
+            inArray(RolTable.id, rolesIds)
+          )
         )
-        .limit(safeLimit)
-        .offset((safePage - 1) * safeLimit)
+        .orderBy(RolTable.id);
 
-      const map = new Map<number, {
+      const rolesMap = new Map<number, {
         id: number;
         nombre: string;
         descripcion: string;
         estado_registro: boolean;
+        created_at: Date;
+        updated_at: Date;
         accesos: { id: number; path: string }[];
       }>();
 
-      for (const rol of roles) {
-        if (!map.has(rol.id)) {
-          map.set(rol.id, {
+      for (const rol of rolesConAccesos) {
+        if (!rolesMap.has(rol.id)) {
+          rolesMap.set(rol.id, {
             id: rol.id,
             nombre: rol.nombre,
             descripcion: rol.descripcion,
             estado_registro: rol.estado_registro,
+            created_at: rol.created_at,
+            updated_at: rol.updated_at,
             accesos: []
           });
         }
 
-        map.get(rol.id)!.accesos.push(rol.acceso);
+        if (rol.acceso?.id) {
+          rolesMap.get(rol.id)!.accesos.push(rol.acceso);
+        }
       }
 
-      const result = [...map.values()];
-    
+      const result = rolesIds
+        .map(id => rolesMap.get(id))
+        .filter(Boolean);
+
       return {
         data: result,
         pagination: {
-          totalPages: totalPages,
-          page: page,
+          total: total,
+          page: safePage,
+          limit: safeLimit,
           lastPage: lastPage
         }
       };
 
-    
     } catch (error) {
-      throw new InternalServerErrorException(`Ocurrio un error con el sistema: ${error}`);
+      console.error('Error en findAllRol:', error);
+      throw new InternalServerErrorException('Error al obtener roles');
     }
   }
 
-  async findOneRol(id: number, estado: boolean){
+  async findOneRol(id: number, estado: boolean) {
     try {
-
-      const rol = await this.db
+      const rolesConAccesos = await this.db
         .select({
           ...getTableColumns(RolTable),
           acceso: {
@@ -108,32 +133,39 @@ export class RolService {
           }
         })
         .from(RolTable)
-        .innerJoin(Rol_Acceso_Table, eq(Rol_Acceso_Table.rol_id, RolTable.id))
-        .innerJoin(AccesoTable, eq(Rol_Acceso_Table.acceso_id, AccesoTable.id))
+        .leftJoin(Rol_Acceso_Table, eq(Rol_Acceso_Table.rol_id, RolTable.id))
+        .leftJoin(AccesoTable, eq(Rol_Acceso_Table.acceso_id, AccesoTable.id))
         .where(
           and(
-            eq(RolTable.estado_registro, estado),
-            eq(RolTable.id, id)
+            eq(RolTable.id, id),
+            eq(RolTable.estado_registro, estado)
           )
-        )
+        );
 
-      if (rol.length === 0) {
+      if (rolesConAccesos.length === 0) {
         throw new NotFoundException(`No se encontró el rol con id ${id}`);
       }
 
+      const primerRol = rolesConAccesos[0];
+
       return {
-        data: {
-          rol: {
-            id: rol[0].id,
-            nombre: rol[0].nombre,
-            estado_registro: rol[0].estado_registro
-          },
-          accesos: rol.map(r => r.acceso)
-        }
+        id: primerRol.id,
+        nombre: primerRol.nombre,
+        descripcion: primerRol.descripcion,
+        estado_registro: primerRol.estado_registro,
+        created_at: primerRol.created_at,
+        updated_at: primerRol.updated_at,
+        accesos: rolesConAccesos
+          .map(rol => rol.acceso)
+          .filter(acceso => acceso?.id)
       };
 
     } catch (error) {
-      throw new BadRequestException(error)
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      console.error('Error en findOneRol:', error);
+      throw new InternalServerErrorException('Error al obtener el rol');
     }
   }
 
