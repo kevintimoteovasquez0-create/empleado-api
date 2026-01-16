@@ -44,6 +44,11 @@ export class AuthGuard implements CanActivate {
         secret: jwtConstants.secret,
       });
 
+      // 🔥 VALIDAR QUE NO SEA UN TOKEN TEMPORAL (para 2FA)
+      if (payload.pendingTwoFactor) {
+        throw new UnauthorizedException('Debes completar la verificación 2FA primero');
+      }
+
       request["user"] = payload; // Guardar usuario en la request
 
       // 🔹 Obtener accesos requeridos desde @AccesoRequerido()
