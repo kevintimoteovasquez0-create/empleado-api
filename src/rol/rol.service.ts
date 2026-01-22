@@ -253,7 +253,8 @@ export class RolService {
           await operacion
             .update(RolTable)
             .set({
-              nombre: nombre
+              nombre: nombre,
+              updated_at: new Date()
             })
             .where(
               eq(RolTable.id, id)
@@ -333,7 +334,8 @@ export class RolService {
       await this.db
         .update(RolTable)
         .set({
-          estado_registro: true
+          estado_registro: true,
+          updated_at: new Date()
         })
         .where(
           eq(RolTable.id, id)
@@ -353,7 +355,8 @@ export class RolService {
       await this.db
         .update(RolTable)
         .set({
-          estado_registro: false
+          estado_registro: false,
+          updated_at: new Date()
         })
         .where(
           eq(RolTable.id, id)

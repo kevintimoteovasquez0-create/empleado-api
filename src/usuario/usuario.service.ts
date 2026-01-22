@@ -13,7 +13,7 @@ import { DrizzleService } from 'src/drizzle/drizzle.service';
 import { UsuarioTable } from 'src/drizzle/schema/usuario';
 import { RolTable } from 'src/drizzle/schema/rol';
 import { EmpresaTable } from 'src/drizzle/schema/empresa';
-import { and, eq, ne, or, SQL } from 'drizzle-orm';
+import { and, eq, gte, lte, ne, or, SQL } from 'drizzle-orm';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { getTableColumns } from 'drizzle-orm';
 import { count } from 'drizzle-orm';
@@ -105,78 +105,77 @@ export class UsuarioService {
 
   }
 
-  async getAllUsuario(paginationUsuarioDto: PaginationUsuarioDto, estado: boolean){
-
+  async getAllUsuario(paginationUsuarioDto: PaginationUsuarioDto, estado: boolean) {
     try {
+      const { page, limit, fechaInicio, fechaFin, rolId } = paginationUsuarioDto;
 
-      const {page, limit, fechaInicio, fechaFin, rolId} = paginationUsuarioDto
+      const safeLimit = Math.max(1, limit ?? 10);
+      const safePage = Math.max(1, page ?? 1);
 
-      const safeLimit = limit ?? 10;
-      const safePage = page ?? 1;
+      const conditions = [eq(UsuarioTable.estado_registro, estado)];
 
-      const where: any = {}
+      // Filtro por fechas
+      if (fechaInicio && fechaFin) {
+        const fechaInicioDate = new Date(fechaInicio);
+        const fechaFinDate = new Date(fechaFin);
 
-      if(fechaInicio && fechaFin){
-        where.fecha_ingreso = {
-          gte: new Date(fechaInicio),
-          lte: new Date(fechaFin)
+        if (!isNaN(fechaInicioDate.getTime()) && !isNaN(fechaFinDate.getTime())) {
+          conditions.push(
+            gte(UsuarioTable.fecha_ingreso, fechaInicioDate.toISOString()),
+            lte(UsuarioTable.fecha_ingreso, fechaFinDate.toISOString())
+          );
         }
       }
 
-      if(rolId){
-
-        const [rol] = await this.db
-          .select({
-            id: RolTable.id,
-            nombre: RolTable.nombre
-          })
+      // Filtro por rol
+      if (rolId) {
+        const rolExists = await this.db
+          .select({ id: RolTable.id })
           .from(RolTable)
           .where(eq(RolTable.id, rolId))
           .limit(1);
 
-        if(rol){
-          where.rol_id = rol.id
+        if (rolExists.length > 0) {
+          conditions.push(eq(UsuarioTable.rol_id, rolId));
         }
-
       }
 
-      where.estado_registro = estado
+      // Combinar todas las condiciones
+      const whereClause = and(...conditions);
 
-      const [{value}] = await this.db
+      const [{ value }] = await this.db
         .select({ value: count(UsuarioTable.id) })
         .from(UsuarioTable)
-        .where(where)
+        .where(whereClause);
 
-      const totalUsuario = Number(value)
+      const totalUsuario = Number(value);
+      const lastPage = Math.ceil(totalUsuario / safeLimit);
 
-      const lastPage = Math.ceil(totalUsuario / safeLimit)
-       
-
-      const usuario = await this.db
+      const usuarios = await this.db
         .select()
         .from(UsuarioTable)
-        .where(where)
+        .where(whereClause)
         .limit(safeLimit)
-        .offset((safePage - 1) * safeLimit)
+        .offset((safePage - 1) * safeLimit);
 
       return {
-        data: usuario.map((user) => ({
+        data: usuarios.map((user) => ({
           ...user,
-          imagen_url: user.nombre_imagen 
-          ? this.fotoService.obtenerUrlCompleta('usuario', user.id, user.nombre_imagen)
-          : null
+          imagen_url: user.nombre_imagen
+            ? this.fotoService.obtenerUrlCompleta('usuario', user.id, user.nombre_imagen)
+            : null,
         })),
         pagination: {
-          totalUsuario: totalUsuario,
+          totalUsuario,
           page: safePage,
-          lastPage: lastPage
-        }
+          lastPage,
+        },
       };
-
     } catch (error) {
-      throw new InternalServerErrorException(error)
+      throw new InternalServerErrorException(
+        `Error al obtener usuarios: ${error.message}`
+      );
     }
-
   }
 
   private async usuarioExistenteAlCrear(email: string, numero_documento: string, telefono: string){
@@ -281,6 +280,7 @@ export class UsuarioService {
           // Datos básicos
           empresa_id: empresaId,
           rol_id: createUsuarioDto.rol_id,
+          area_id: createUsuarioDto.area_id,
           nombre: createUsuarioDto.nombre,
           apellido: createUsuarioDto.apellido,
           tipo_documento: createUsuarioDto.tipo_documento,
@@ -333,7 +333,8 @@ export class UsuarioService {
       const [foto] = await this.db
         .update(UsuarioTable)
         .set({
-          nombre_imagen: fotoDto.foto_url
+          nombre_imagen: fotoDto.foto_url,
+          updated_at: new Date()
         })
         .where(
           eq(UsuarioTable.id, id)
@@ -387,6 +388,7 @@ export class UsuarioService {
           rol_id: updateUsuarioDto.rol_id,
           // Imagen
           nombre_imagen: pathUrl,
+          updated_at: new Date()
         })
         .where(eq(UsuarioTable.id, id))
         .returning();
@@ -411,7 +413,8 @@ export class UsuarioService {
       const [updatePassword] = await this.db
         .update(UsuarioTable)
         .set({
-          password: hashedPassword
+          password: hashedPassword,
+          updated_at: new Date()
         })
         .where(
           eq(UsuarioTable.id, usuarioId)
@@ -434,7 +437,8 @@ export class UsuarioService {
       await this.db
         .update(UsuarioTable)
         .set({
-          estado_registro: true
+          estado_registro: true,
+          updated_at: new Date()
         })
         .where(
           eq(UsuarioTable.id, id)
@@ -457,7 +461,8 @@ export class UsuarioService {
       await this.db
         .update(UsuarioTable)
         .set({
-          estado_registro: false
+          estado_registro: false,
+          updated_at: new Date()
         })
         .where(
           eq(UsuarioTable.id, id)

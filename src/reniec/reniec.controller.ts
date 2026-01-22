@@ -31,7 +31,7 @@ export class ReniecController {
     description: 'Número de documento (DNI de 8 dígitos)'
   })
   findDataUsuarioByDocument(
-    @Param('nrodocumento') numero: NumeroDto
+    @Param('nrodocumento') numero: string
   ) {
     return this.reniecService.findDataUsuarioByDocument(numero);
   }

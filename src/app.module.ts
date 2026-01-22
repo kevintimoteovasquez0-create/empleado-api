@@ -9,6 +9,9 @@ import { FotoModule } from './foto/foto.module';
 import { EmpresaModule } from './empresa/empresa.module';
 import { ConfigModule } from "@nestjs/config";
 import { DrizzleModule } from './drizzle/drizzle.module';
+import { ConvocatoriaModule } from './convocatoria/convocatoria.module';
+import { HistorialConvocatoriaModule } from './historial_convocatoria/historial_convocatoria.module';
+import { AreaModule } from './area/area.module';
 
 @Module({
   imports: [
@@ -23,7 +26,7 @@ import { DrizzleModule } from './drizzle/drizzle.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
-    }), DrizzleModule
+    }), DrizzleModule, ConvocatoriaModule, HistorialConvocatoriaModule, AreaModule
   ],
   controllers: [],
   providers: [],

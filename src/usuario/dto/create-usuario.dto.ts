@@ -2,14 +2,18 @@ import { Transform, Type } from "class-transformer";
 import { IsDate, IsEmail, IsEnum, IsInt, IsNotEmpty, IsString, Matches, MaxLength } from "class-validator";
 import { TipoDocumentoUsuarioList } from "../enum/usuario.enum";
 import type { TipoDocumentoUsuarioType } from "../enum/usuario.enum";
-import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { ApiProperty } from "@nestjs/swagger";
 
 export class CreateUsuarioDto {
 
   // Datos del usuario
-  @ApiPropertyOptional({ description: 'ID del rol del usuario', example: 1 })
+  @ApiProperty({ description: 'ID del rol del usuario', example: 1 })
   @IsInt()
   rol_id: number;
+
+  @ApiProperty({ description: 'ID del area del usuario', example: 1 })
+  @IsInt()
+  area_id: number;
 
   @ApiProperty({ description: 'Nombre del usuario', example: 'Juan' })
   @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))

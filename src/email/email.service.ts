@@ -341,6 +341,7 @@ export class EmailService {
           verificado_email: true,
           token_verificacion_email: null,
           token_expiry_email: null,
+          updated_at: new Date()
         })
         .where(eq(UsuarioTable.id, usuarioEncontrado[0].id));
 
@@ -567,6 +568,7 @@ export class EmailService {
           password: hashedPassword,
           token_verificacion_password: null,
           token_expiry_password: null,
+          updated_at: new Date()
         })
         .where(eq(UsuarioTable.id, usuarioEncontrado[0].id));
 

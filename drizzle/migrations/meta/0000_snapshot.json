@@ -1,5 +1,5 @@
 {
-  "id": "3c8f68a7-5397-447f-b2fb-f24b217a7ad0",
+  "id": "6ee513ff-67fe-4964-8d0a-dde7a6521a78",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -130,69 +130,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.cargoTrabajo": {
-      "name": "cargoTrabajo",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "identity": {
-            "type": "always",
-            "name": "cargoTrabajo_id_seq",
-            "schema": "public",
-            "increment": "1",
-            "startWith": "1",
-            "minValue": "1",
-            "maxValue": "2147483647",
-            "cache": "1",
-            "cycle": false
-          }
-        },
-        "nombre": {
-          "name": "nombre",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "descripcion": {
-          "name": "descripcion",
-          "type": "varchar(150)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "estado_registro": {
-          "name": "estado_registro",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": true
-        },
-        "createdAt": {
-          "name": "createdAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updatedAt": {
-          "name": "updatedAt",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.convocatoria": {
       "name": "convocatoria",
       "schema": "",
@@ -214,11 +151,11 @@
             "cycle": false
           }
         },
-        "cargo_id": {
-          "name": "cargo_id",
-          "type": "integer",
+        "cargo": {
+          "name": "cargo",
+          "type": "varchar(50)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "usuario_id": {
           "name": "usuario_id",
@@ -239,11 +176,24 @@
           "primaryKey": false,
           "notNull": true
         },
+        "modalidad": {
+          "name": "modalidad",
+          "type": "modalidad",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descripcion": {
+          "name": "descripcion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "remuneracion": {
           "name": "remuneracion",
           "type": "numeric(10, 2)",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "es_a_convenir": {
           "name": "es_a_convenir",
@@ -255,6 +205,12 @@
         "responsable_id": {
           "name": "responsable_id",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fecha_finalizacion": {
+          "name": "fecha_finalizacion",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": true
         },
@@ -282,19 +238,6 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "convocatoria_cargo_id_cargoTrabajo_id_fk": {
-          "name": "convocatoria_cargo_id_cargoTrabajo_id_fk",
-          "tableFrom": "convocatoria",
-          "tableTo": "cargoTrabajo",
-          "columnsFrom": [
-            "cargo_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
         "convocatoria_usuario_id_usuario_id_fk": {
           "name": "convocatoria_usuario_id_usuario_id_fk",
           "tableFrom": "convocatoria",
@@ -400,6 +343,128 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.historial_convocatoria": {
+      "name": "historial_convocatoria",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "historial_convocatoria_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "2147483647",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "convocatoria_id": {
+          "name": "convocatoria_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipo_documento": {
+          "name": "tipo_documento",
+          "type": "tipo_documento_usuario",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "numero_documento": {
+          "name": "numero_documento",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "telefono": {
+          "name": "telefono",
+          "type": "varchar(9)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nombre": {
+          "name": "nombre",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "apellido": {
+          "name": "apellido",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "link_cv": {
+          "name": "link_cv",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "estado_convocatoria": {
+          "name": "estado_convocatoria",
+          "type": "estado_convocatoria",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "historial_convocatoria_convocatoria_id_convocatoria_id_fk": {
+          "name": "historial_convocatoria_convocatoria_id_convocatoria_id_fk",
+          "tableFrom": "historial_convocatoria",
+          "tableTo": "convocatoria",
+          "columnsFrom": [
+            "convocatoria_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "historial_convocatoria_numero_documento_unique": {
+          "name": "historial_convocatoria_numero_documento_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "numero_documento"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
@@ -560,6 +625,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "area_id": {
+          "name": "area_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
         "nombre": {
           "name": "nombre",
           "type": "varchar(50)",
@@ -574,8 +645,7 @@
         },
         "tipo_documento": {
           "name": "tipo_documento",
-          "type": "tipo_documento_usuario",
-          "typeSchema": "public",
+          "type": "varchar(20)",
           "primaryKey": false,
           "notNull": true
         },
@@ -695,15 +765,15 @@
           "notNull": true,
           "default": false
         },
-        "two_factor_code": {
-          "name": "two_factor_code",
-          "type": "integer",
+        "two_factor_secret": {
+          "name": "two_factor_secret",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
-        "two_factor_expired": {
-          "name": "two_factor_expired",
-          "type": "timestamp",
+        "recovery_codes": {
+          "name": "recovery_codes",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         },
@@ -756,6 +826,19 @@
           ],
           "onDelete": "no action",
           "onUpdate": "no action"
+        },
+        "usuario_area_id_areaTrabajo_id_fk": {
+          "name": "usuario_area_id_areaTrabajo_id_fk",
+          "tableFrom": "usuario",
+          "tableTo": "areaTrabajo",
+          "columnsFrom": [
+            "area_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -781,12 +864,32 @@
     }
   },
   "enums": {
+    "public.modalidad": {
+      "name": "modalidad",
+      "schema": "public",
+      "values": [
+        "REMOTO",
+        "PRESENCIAL",
+        "SEMIPRESENCIAL"
+      ]
+    },
     "public.tipoEmpleado": {
       "name": "tipoEmpleado",
       "schema": "public",
       "values": [
         "PROF",
         "PRAT"
+      ]
+    },
+    "public.estado_convocatoria": {
+      "name": "estado_convocatoria",
+      "schema": "public",
+      "values": [
+        "PENDIENTE",
+        "ENREVISION",
+        "PRESELECCIONADO",
+        "RECHAZADO",
+        "ACEPTADO"
       ]
     },
     "public.tipo_documento_usuario": {

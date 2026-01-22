@@ -1,5 +1,4 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { NumeroDto } from './dto/numero.dto';
 import { envs } from '../config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
@@ -12,7 +11,7 @@ export class ReniecService {
 
   constructor(private readonly httpService: HttpService){}
   
-  async findDataUsuarioByDocument(numero: NumeroDto){
+  async findDataUsuarioByDocument(numero: string){
     try {
       const response = await firstValueFrom(
         this.httpService.get(`${this.API_URL}/?numero=${numero}`,

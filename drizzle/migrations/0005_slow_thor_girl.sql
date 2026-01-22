@@ -1,1 +1,0 @@
-ALTER TABLE "convocatoria" DROP COLUMN "descripciondos";

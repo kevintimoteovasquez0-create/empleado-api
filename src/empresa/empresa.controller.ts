@@ -4,6 +4,7 @@ import { EmpresaService } from './empresa.service';
 import { PaginationDto } from 'src/common';
 import { CreateEmpresaDto } from './dto/create-empresa.dto';
 import { UpdateEmpresaDto } from './dto/update-empresa.dto';
+import { PaginationEmpresaDto } from './dto/pagination-empresa.dto';
 
 @ApiTags('Empresa')
 @Controller('empresa')
@@ -25,11 +26,11 @@ export class EmpresaController {
     description: 'Listado de empresas obtenido correctamente',
   })
   findAllEmpresa(
-    @Query() paginationDto: PaginationDto,
+    @Query() paginationEmpresaDto: PaginationEmpresaDto,
     @Query('estado') estado?: string
   ){
     const estadoBoolean = estado === 'false' ? false : true;
-    return this.empresaService.findAllEmpresa(paginationDto, estadoBoolean)
+    return this.empresaService.findAllEmpresa(paginationEmpresaDto, estadoBoolean)
   }
 
   @Get(':id')
@@ -97,7 +98,7 @@ export class EmpresaController {
     return this.empresaService.updateEmpresa(updateEmpresaDto, id)
   }
 
-  @Patch(':id')
+  @Patch(':id/remove')
   @ApiOperation({
     summary: 'Eliminar empresa',
     description: 'Elimina (lógicamente) una empresa',
@@ -115,7 +116,7 @@ export class EmpresaController {
     return this.empresaService.removeEmpresa(id)
   }
 
-  @Patch(':id')
+  @Patch(':id/restore')
   @ApiOperation({
     summary: 'Restaurar empresa',
     description: 'Restaura una empresa previamente eliminada',

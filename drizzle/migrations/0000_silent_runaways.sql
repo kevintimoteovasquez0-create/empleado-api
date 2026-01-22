@@ -1,4 +1,6 @@
+CREATE TYPE "public"."modalidad" AS ENUM('REMOTO', 'PRESENCIAL', 'SEMIPRESENCIAL');--> statement-breakpoint
 CREATE TYPE "public"."tipoEmpleado" AS ENUM('PROF', 'PRAT');--> statement-breakpoint
+CREATE TYPE "public"."estado_convocatoria" AS ENUM('PENDIENTE', 'ENREVISION', 'PRESELECCIONADO', 'RECHAZADO', 'ACEPTADO');--> statement-breakpoint
 CREATE TYPE "public"."tipo_documento_usuario" AS ENUM('DNI', 'CE');--> statement-breakpoint
 CREATE TABLE "acceso" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "acceso_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
@@ -18,24 +20,18 @@ CREATE TABLE "areaTrabajo" (
 	"updatedAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "cargoTrabajo" (
-	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "cargoTrabajo_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
-	"nombre" varchar(50) NOT NULL,
-	"descripcion" varchar(150) NOT NULL,
-	"estado_registro" boolean DEFAULT true NOT NULL,
-	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"updatedAt" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "convocatoria" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "convocatoria_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
-	"cargo_id" integer NOT NULL,
+	"cargo" varchar(50),
 	"usuario_id" integer NOT NULL,
 	"area_id" integer NOT NULL,
 	"tipo_empleado" "tipoEmpleado" NOT NULL,
-	"remuneracion" numeric(10, 2) NOT NULL,
+	"modalidad" "modalidad" NOT NULL,
+	"descripcion" text NOT NULL,
+	"remuneracion" numeric(10, 2),
 	"es_a_convenir" boolean DEFAULT false NOT NULL,
 	"responsable_id" integer NOT NULL,
+	"fecha_finalizacion" timestamp NOT NULL,
 	"estado_registro" boolean DEFAULT true NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp DEFAULT now() NOT NULL
@@ -48,6 +44,22 @@ CREATE TABLE "empresa" (
 	"estado_registro" boolean DEFAULT true NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE "historial_convocatoria" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "historial_convocatoria_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"convocatoria_id" integer NOT NULL,
+	"tipo_documento" "tipo_documento_usuario" NOT NULL,
+	"numero_documento" varchar(20) NOT NULL,
+	"telefono" varchar(9) NOT NULL,
+	"nombre" varchar(50) NOT NULL,
+	"apellido" varchar(50) NOT NULL,
+	"email" varchar(50) NOT NULL,
+	"link_cv" varchar(100) NOT NULL,
+	"estado_convocatoria" "estado_convocatoria" NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "historial_convocatoria_numero_documento_unique" UNIQUE("numero_documento")
 );
 --> statement-breakpoint
 CREATE TABLE "rol_acceso" (
@@ -69,9 +81,10 @@ CREATE TABLE "usuario" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "usuario_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
 	"rol_id" integer NOT NULL,
 	"empresa_id" integer NOT NULL,
+	"area_id" integer NOT NULL,
 	"nombre" varchar(50) NOT NULL,
 	"apellido" varchar(50) NOT NULL,
-	"tipo_documento" "tipo_documento_usuario" NOT NULL,
+	"tipo_documento" varchar(20) NOT NULL,
 	"numero_documento" varchar(20) NOT NULL,
 	"fecha_nacimiento" date,
 	"fecha_ingreso" date,
@@ -91,8 +104,8 @@ CREATE TABLE "usuario" (
 	"token_verificacion_password" varchar(255),
 	"token_expiry_password" timestamp,
 	"auth_two_factor" boolean DEFAULT false NOT NULL,
-	"two_factor_code" integer,
-	"two_factor_expired" timestamp,
+	"two_factor_secret" varchar(255),
+	"recovery_codes" text,
 	"estado_registro" boolean DEFAULT true NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -100,11 +113,12 @@ CREATE TABLE "usuario" (
 	CONSTRAINT "usuario_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
-ALTER TABLE "convocatoria" ADD CONSTRAINT "convocatoria_cargo_id_cargoTrabajo_id_fk" FOREIGN KEY ("cargo_id") REFERENCES "public"."cargoTrabajo"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "convocatoria" ADD CONSTRAINT "convocatoria_usuario_id_usuario_id_fk" FOREIGN KEY ("usuario_id") REFERENCES "public"."usuario"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "convocatoria" ADD CONSTRAINT "convocatoria_area_id_areaTrabajo_id_fk" FOREIGN KEY ("area_id") REFERENCES "public"."areaTrabajo"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "convocatoria" ADD CONSTRAINT "convocatoria_responsable_id_usuario_id_fk" FOREIGN KEY ("responsable_id") REFERENCES "public"."usuario"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "historial_convocatoria" ADD CONSTRAINT "historial_convocatoria_convocatoria_id_convocatoria_id_fk" FOREIGN KEY ("convocatoria_id") REFERENCES "public"."convocatoria"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "rol_acceso" ADD CONSTRAINT "rol_acceso_rol_id_rol_id_fk" FOREIGN KEY ("rol_id") REFERENCES "public"."rol"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "rol_acceso" ADD CONSTRAINT "rol_acceso_acceso_id_acceso_id_fk" FOREIGN KEY ("acceso_id") REFERENCES "public"."acceso"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "usuario" ADD CONSTRAINT "usuario_rol_id_rol_id_fk" FOREIGN KEY ("rol_id") REFERENCES "public"."rol"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "usuario" ADD CONSTRAINT "usuario_empresa_id_empresa_id_fk" FOREIGN KEY ("empresa_id") REFERENCES "public"."empresa"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "usuario" ADD CONSTRAINT "usuario_empresa_id_empresa_id_fk" FOREIGN KEY ("empresa_id") REFERENCES "public"."empresa"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "usuario" ADD CONSTRAINT "usuario_area_id_areaTrabajo_id_fk" FOREIGN KEY ("area_id") REFERENCES "public"."areaTrabajo"("id") ON DELETE no action ON UPDATE no action;

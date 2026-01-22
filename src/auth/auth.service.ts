@@ -268,7 +268,10 @@ export class AuthService {
       // Actualizar códigos restantes
       await this.db
         .update(UsuarioTable)
-        .set({ recovery_codes: JSON.stringify(remainingCodes) })
+        .set({ 
+          recovery_codes: JSON.stringify(remainingCodes),
+          updated_at: new Date()
+        })
         .where(eq(UsuarioTable.id, usuario.id));
 
       const data: AuthPayload = {
@@ -323,7 +326,10 @@ export class AuthService {
       // Guardar el secreto
       await this.db
         .update(UsuarioTable)
-        .set({ two_factor_secret: secret.base32 })
+        .set({ 
+          two_factor_secret: secret.base32,
+          updated_at: new Date()
+        })
         .where(eq(UsuarioTable.id, usuarioId));
 
       // Generar código QR
@@ -383,7 +389,8 @@ export class AuthService {
         .update(UsuarioTable)
         .set({ 
           auth_two_factor: true,
-          recovery_codes: JSON.stringify(hashedCodes)
+          recovery_codes: JSON.stringify(hashedCodes),
+          updated_at: new Date()
         })
         .where(eq(UsuarioTable.id, usuarioId));
 
@@ -437,7 +444,8 @@ export class AuthService {
       await this.db
         .update(UsuarioTable)
         .set({ 
-          recovery_codes: JSON.stringify(hashedCodes) 
+          recovery_codes: JSON.stringify(hashedCodes),
+          updated_at: new Date()
         })
         .where(eq(UsuarioTable.id, usuarioId));
 
@@ -490,6 +498,7 @@ export class AuthService {
           auth_two_factor: false,
           two_factor_secret: null,
           recovery_codes: null,
+          updated_at: new Date()
         })
         .where(eq(UsuarioTable.id, usuarioId));
 
@@ -529,7 +538,8 @@ export class AuthService {
         .update(UsuarioTable)
         .set({
           token_verificacion_password: tokenRecuperacionPassword,
-          token_expiry_password: new Date(Date.now() + 86400000)
+          token_expiry_password: new Date(Date.now() + 86400000),
+          updated_at: new Date()
         })
         .where(eq(UsuarioTable.email, emailDto.email))
         

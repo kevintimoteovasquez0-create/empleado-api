@@ -5,6 +5,7 @@ import { AccesoTable } from '../schema/acceso';
 import { Rol_Acceso_Table } from '../schema/rol_acceso';
 import { UsuarioTable } from '../schema/usuario';
 import { DrizzleService } from '../drizzle.service';
+import { AreaTrabajoTable } from '../schema/areaTrabajo';
 
 async function main() {
 
@@ -28,6 +29,11 @@ async function main() {
       razon_social: "Empresa de carnes",
       ruc: "12345678911"
     }).returning();
+
+    const [areaTrabajo] = await db.insert(AreaTrabajoTable).values({
+      nombre: 'Gerente General',
+      descripcion: 'Es gerente general'
+    }).returning()
 
     await db.insert(AccesoTable).values([
       { path: "local", descripcion: "1" },
@@ -65,7 +71,7 @@ async function main() {
     const usuarioData = {
       nombre: 'usuario',
       apellido: 'apellidousuario',
-      tipo_documento: "DNI" as const,  
+      tipo_documento: "DNI" as const,
       numero_documento: '78945612',  
       fecha_nacimiento: new Date('1990-01-01').toISOString(),  
       fecha_ingreso: new Date().toISOString(),
@@ -78,7 +84,8 @@ async function main() {
       email: 'empresoftperu@gmail.com',
       password: hashedPassword,
       rol_id: adminRole.id, 
-      empresa_id: empresa.id, 
+      empresa_id: empresa.id,
+      area_id: areaTrabajo.id,
       nombre_imagen: 'empresoft.jpg',
       verificado_email: true, 
     };
@@ -100,6 +107,7 @@ async function main() {
       password: hashedPassword,
       rol_id: adminRoleSegundo.id,  
       empresa_id: empresa.id,
+      area_id: areaTrabajo.id,
       nombre_imagen: 'empresoft.jpg',
       verificado_email: true,
     };

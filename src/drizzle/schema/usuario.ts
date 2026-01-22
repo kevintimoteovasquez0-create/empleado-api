@@ -1,6 +1,7 @@
 import { pgTable, integer, varchar, boolean, date, timestamp, pgEnum, text } from "drizzle-orm/pg-core";
 import { EmpresaTable } from "./empresa";
 import { RolTable } from "./rol";
+import { AreaTrabajoTable } from "./areaTrabajo";
 
 export const TipoDocumentoUsuario = pgEnum('tipo_documento_usuario', [
   "DNI",
@@ -15,6 +16,7 @@ export const UsuarioTable = pgTable('usuario', {
   empresa_id: integer('empresa_id')
     .references(() => EmpresaTable.id)
     .notNull(),
+  area_id: integer('area_id').references(() => AreaTrabajoTable.id).notNull(),
   nombre: varchar('nombre', { length: 50 }).notNull(),
   apellido: varchar('apellido', { length: 50 }).notNull(),
   tipo_documento: varchar('tipo_documento', { length: 20 }).notNull(),
