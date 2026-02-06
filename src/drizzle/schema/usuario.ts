@@ -1,7 +1,7 @@
 import { pgTable, integer, varchar, boolean, date, timestamp, pgEnum, text } from "drizzle-orm/pg-core";
 import { EmpresaTable } from "./empresa";
 import { RolTable } from "./rol";
-import { AreaTrabajoTable } from "./areaTrabajo";
+import { AreaTrabajoTable } from "./area";
 
 export const TipoDocumentoUsuario = pgEnum('tipo_documento_usuario', [
   "DNI",
