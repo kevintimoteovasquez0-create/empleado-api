@@ -1,5 +1,5 @@
 import { decimal, pgEnum, boolean, integer, timestamp, pgTable, text } from "drizzle-orm/pg-core";
-import { AreaTrabajoTable } from "./areaTrabajo";
+import { AreaTable } from "./area";
 import { UsuarioTable } from "./usuario";
 import { varchar } from "drizzle-orm/pg-core";
 
@@ -18,7 +18,7 @@ export const ConvocatoriaTable = pgTable("convocatoria", {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     cargo: varchar('cargo', {length: 50}),
     usuario_id: integer('usuario_id').references(() => UsuarioTable.id).notNull(),
-    area_id: integer('area_id').references(() => AreaTrabajoTable.id).notNull(),
+    area_id: integer('area_id').references(() => AreaTable.id).notNull(),
     tipo_empleado: TipoEmpleado('tipo_empleado').notNull(),
     modalidad: ModalidadEmpleado('modalidad').notNull(),
     descripcion: text('descripcion').notNull(),

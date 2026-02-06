@@ -5,8 +5,8 @@ import { ConvocatoriaTable } from 'src/drizzle/schema/convocatoria';
 import { and, count, eq } from 'drizzle-orm';
 import { CreateConvocatoriaDto } from './dto/create-convocatoria.dto';
 import { UsuarioTable } from 'src/drizzle/schema/usuario';
-import { AreaTrabajoTable } from 'src/drizzle/schema/areaTrabajo';
 import { alias } from 'drizzle-orm/pg-core';
+import { AreaTable } from 'src/drizzle/schema/area';
 
 @Injectable()
 export class ConvocatoriaService {
@@ -57,9 +57,9 @@ export class ConvocatoriaService {
             apellido: UsuarioResponsable.apellido
           },
           area: {
-            id: AreaTrabajoTable.id,
-            nombre: AreaTrabajoTable.nombre,
-            descripcion: AreaTrabajoTable.descripcion
+            id: AreaTable.id,
+            nombre: AreaTable.nombre,
+            descripcion: AreaTable.descripcion
           },
           cargo: ConvocatoriaTable.cargo,
           tipo_empleado: ConvocatoriaTable.tipo_empleado,
@@ -75,7 +75,7 @@ export class ConvocatoriaService {
         .from(ConvocatoriaTable)
         .leftJoin(UsuarioCreador, eq(ConvocatoriaTable.usuario_id, UsuarioCreador.id))
         .leftJoin(UsuarioResponsable, eq(ConvocatoriaTable.responsable_id, UsuarioResponsable.id))
-        .leftJoin(AreaTrabajoTable, eq(ConvocatoriaTable.area_id, AreaTrabajoTable.id))
+        .leftJoin(AreaTable, eq(ConvocatoriaTable.area_id, AreaTable.id))
         .where(and(...whereConditions))
         .limit(safeLimit)
         .offset((safePage - 1) * safeLimit);
@@ -85,6 +85,7 @@ export class ConvocatoriaService {
         pagination: {
           totalConvocatoria: totalConvocatoria,
           page: safePage,
+          limit: safeLimit,
           lastPage: lastPage
         },
       };
@@ -102,6 +103,7 @@ export class ConvocatoriaService {
 
       const [response] = await this.db
         .select({
+          id: ConvocatoriaTable.id,
           usuario_creador: {
             id: UsuarioCreador.id,
             nombre: UsuarioCreador.nombre,
@@ -113,9 +115,9 @@ export class ConvocatoriaService {
             apellido: UsuarioResponsable.apellido
           },
           area: {
-            id: AreaTrabajoTable.id,
-            nombre: AreaTrabajoTable.nombre,
-            descripcion: AreaTrabajoTable.descripcion
+            id: AreaTable.id,
+            nombre: AreaTable.nombre,
+            descripcion: AreaTable.descripcion
           },
           cargo: ConvocatoriaTable.cargo,
           tipo_empleado: ConvocatoriaTable.tipo_empleado,
@@ -131,7 +133,7 @@ export class ConvocatoriaService {
         .from(ConvocatoriaTable)
         .leftJoin(UsuarioCreador, eq(ConvocatoriaTable.usuario_id, UsuarioCreador.id))
         .leftJoin(UsuarioResponsable, eq(ConvocatoriaTable.responsable_id, UsuarioResponsable.id))
-        .leftJoin(AreaTrabajoTable, eq(ConvocatoriaTable.area_id, AreaTrabajoTable.id))
+        .leftJoin(AreaTable, eq(ConvocatoriaTable.area_id, AreaTable.id))
         .where(
           and(
             eq(ConvocatoriaTable.id, id),

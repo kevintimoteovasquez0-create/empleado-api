@@ -12,6 +12,7 @@ import { DrizzleModule } from './drizzle/drizzle.module';
 import { ConvocatoriaModule } from './convocatoria/convocatoria.module';
 import { HistorialConvocatoriaModule } from './historial_convocatoria/historial_convocatoria.module';
 import { AreaModule } from './area/area.module';
+import { EmpleadoModule } from './empleado/empleado.module';
 
 @Module({
   imports: [
@@ -26,7 +27,7 @@ import { AreaModule } from './area/area.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
-    }), DrizzleModule, ConvocatoriaModule, HistorialConvocatoriaModule, AreaModule
+    }), DrizzleModule, ConvocatoriaModule, HistorialConvocatoriaModule, AreaModule, EmpleadoModule
   ],
   controllers: [],
   providers: [],

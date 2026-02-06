@@ -5,7 +5,7 @@ import { AccesoTable } from '../schema/acceso';
 import { Rol_Acceso_Table } from '../schema/rol_acceso';
 import { UsuarioTable } from '../schema/usuario';
 import { DrizzleService } from '../drizzle.service';
-import { AreaTrabajoTable } from '../schema/areaTrabajo';
+import { AreaTrabajoTable } from '../schema/area';
 
 async function main() {
 
