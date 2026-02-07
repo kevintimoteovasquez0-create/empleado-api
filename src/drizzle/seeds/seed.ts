@@ -36,7 +36,7 @@ async function main() {
       nombre: 'Gerente General',
       descripcion: 'Es gerente general',
       responsable_id: null
-    }).returning()
+    }).returning();
 
     await db.insert(AccesoTable).values([
       { path: "local", descripcion: "1" },
@@ -116,7 +116,7 @@ async function main() {
     };
 
     // Creación en Prisma
-    const [usuarioAdmin] = await db.insert(UsuarioTable).values(usuarioData).returning();
+    const [usuarioAdmin] = await db.insert(UsuarioTable).values(usuarioData).returning() as any[];
     await db.insert(UsuarioTable).values(usuarioDataDos);
 
     const [area] = await db.update(AreaTable)

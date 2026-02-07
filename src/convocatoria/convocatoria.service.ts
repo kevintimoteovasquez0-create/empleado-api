@@ -41,21 +41,21 @@ export class ConvocatoriaService {
       const totalConvocatoria = Number(value);
       const lastPage = Math.ceil(totalConvocatoria / safeLimit);
 
-      const UsuarioCreador = alias(UsuarioTable, 'usuario_creador');
-      const UsuarioResponsable = alias(UsuarioTable, 'usuario_responsable');
+      const usuarioCreador = alias(UsuarioTable, 'usuario_creador') as any;
+      const usuarioResponsable = alias(UsuarioTable, 'usuario_responsable') as any;
 
       const response = await this.db
         .select({
           id: ConvocatoriaTable.id,
           usuario_creador: {
-            id: UsuarioCreador.id,
-            nombre: UsuarioCreador.nombre,
-            apellido: UsuarioCreador.apellido
+            id: usuarioCreador.id,
+            nombre: usuarioCreador.nombre,
+            apellido: usuarioCreador.apellido
           },
           usuario_responsable: {
-            id: UsuarioResponsable.id,
-            nombre: UsuarioResponsable.nombre,
-            apellido: UsuarioResponsable.apellido
+            id: usuarioResponsable.id,
+            nombre: usuarioResponsable.nombre,
+            apellido: usuarioResponsable.apellido
           },
           area: {
             id: AreaTable.id,
@@ -74,8 +74,8 @@ export class ConvocatoriaService {
           updated_at: ConvocatoriaTable.updated_at
         })
         .from(ConvocatoriaTable)
-        .leftJoin(UsuarioCreador, eq(ConvocatoriaTable.usuario_id, UsuarioCreador.id))
-        .leftJoin(UsuarioResponsable, eq(ConvocatoriaTable.responsable_id, UsuarioResponsable.id))
+        .leftJoin(usuarioCreador, eq(ConvocatoriaTable.usuario_id, usuarioCreador.id))
+        .leftJoin(usuarioResponsable, eq(ConvocatoriaTable.responsable_id, usuarioResponsable.id))
         .leftJoin(AreaTable, eq(ConvocatoriaTable.area_id, AreaTable.id))
         .where(and(...whereConditions))
         .limit(safeLimit)
@@ -99,21 +99,21 @@ export class ConvocatoriaService {
   async findOneConvocatoriaById(id: number, estado: boolean) {
     try {
 
-      const UsuarioCreador = alias(UsuarioTable, 'usuario_creador');
-      const UsuarioResponsable = alias(UsuarioTable, 'usuario_responsable');
+      const usuarioCreador = alias(UsuarioTable, 'usuario_creador') as any;
+      const usuarioResponsable = alias(UsuarioTable, 'usuario_responsable') as any;
 
       const [response] = await this.db
         .select({
           id: ConvocatoriaTable.id,
           usuario_creador: {
-            id: UsuarioCreador.id,
-            nombre: UsuarioCreador.nombre,
-            apellido: UsuarioCreador.apellido
+            id: usuarioCreador.id,
+            nombre: usuarioCreador.nombre,
+            apellido: usuarioCreador.apellido
           },
           usuario_responsable: {
-            id: UsuarioResponsable.id,
-            nombre: UsuarioResponsable.nombre,
-            apellido: UsuarioResponsable.apellido
+            id: usuarioResponsable.id,
+            nombre: usuarioResponsable.nombre,
+            apellido: usuarioResponsable.apellido
           },
           area: {
             id: AreaTable.id,
@@ -132,8 +132,8 @@ export class ConvocatoriaService {
           updated_at: ConvocatoriaTable.updated_at
         })
         .from(ConvocatoriaTable)
-        .leftJoin(UsuarioCreador, eq(ConvocatoriaTable.usuario_id, UsuarioCreador.id))
-        .leftJoin(UsuarioResponsable, eq(ConvocatoriaTable.responsable_id, UsuarioResponsable.id))
+        .leftJoin(usuarioCreador, eq(ConvocatoriaTable.usuario_id, usuarioCreador.id))
+        .leftJoin(usuarioResponsable, eq(ConvocatoriaTable.responsable_id, usuarioResponsable.id))
         .leftJoin(AreaTable, eq(ConvocatoriaTable.area_id, AreaTable.id))
         .where(
           and(

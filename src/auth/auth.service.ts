@@ -127,7 +127,7 @@ export class AuthService {
       const data: AuthPayload = {
         id: usuario.id,
         email: usuario.email,
-        rol_id: usuario.rol_id,
+        rol_id: usuario.rol.id,
         rol_nombre: usuario.rol.nombre,
         empresa_id: usuario.empresa_id,
         empresa_nombre: usuario.empresa.razon_social,
@@ -193,7 +193,7 @@ export class AuthService {
       const data: AuthPayload = {
         id: usuario.id,
         email: usuario.email,
-        rol_id: usuario.rol_id,
+        rol_id: usuario.rol.id,
         rol_nombre: usuario.rol.nombre,
         empresa_id: usuario.empresa_id,
         empresa_nombre: usuario.empresa.razon_social,
@@ -277,7 +277,7 @@ export class AuthService {
       const data: AuthPayload = {
         id: usuario.id,
         email: usuario.email,
-        rol_id: usuario.rol_id,
+        rol_id: usuario.rol.id,
         rol_nombre: usuario.rol.nombre,
         empresa_id: usuario.empresa_id,
         empresa_nombre: usuario.empresa.razon_social,

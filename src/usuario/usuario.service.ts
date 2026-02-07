@@ -26,16 +26,19 @@ export class UsuarioService {
     private readonly emailService: EmailService
   ) { }
 
-  private get db(){
+  private get db() {
     return this.drizzleService.getDb()
   }
 
-  async findUniqueUsuario(id: number, estado: boolean){
+  async findUniqueUsuario(id: number, estado: boolean) {
     try {
+      const { rol_id, ...restoCamposUsuario } = getTableColumns(UsuarioTable)
+
       const [usuario] = await this.db
         .select({
-          ...getTableColumns(UsuarioTable),
+          ...restoCamposUsuario,
           rol: {
+            id: RolTable.id,
             nombre: RolTable.nombre,
           },
           empresa: {
@@ -53,15 +56,15 @@ export class UsuarioService {
         )
         .limit(1)
 
-      if(!usuario){
+      if (!usuario) {
         throw new NotFoundException(`No se encontro el usuario con id ${id}`)
       }
 
       return {
         ...usuario,
-        imagen_url: usuario.nombre_imagen 
-        ? this.fotoService.obtenerUrlCompleta('usuario', usuario.id, usuario.nombre_imagen)
-        : null
+        imagen_url: usuario.nombre_imagen
+          ? this.fotoService.obtenerUrlCompleta('usuario', usuario.id, usuario.nombre_imagen)
+          : null
       };
 
     } catch (error) {
@@ -73,10 +76,13 @@ export class UsuarioService {
 
     try {
 
+      const { rol_id, ...restoCamposEmail } = getTableColumns(UsuarioTable)
+
       const [buscarUsuarioByEmail] = await this.db
         .select({
-          ...getTableColumns(UsuarioTable),
+          ...restoCamposEmail,
           rol: {
+            id: RolTable.id,
             nombre: RolTable.nombre
           },
           empresa: {
@@ -91,11 +97,15 @@ export class UsuarioService {
         )
         .limit(1)
 
+      if (!buscarUsuarioByEmail) {
+        throw new NotFoundException(`El usuario no fue encontrado`)
+      }
+
       return {
         ...buscarUsuarioByEmail,
         imagen_url: buscarUsuarioByEmail.nombre_imagen
-        ? this.fotoService.obtenerUrlCompleta('usuario', buscarUsuarioByEmail.id, buscarUsuarioByEmail.nombre_imagen)
-        : null
+          ? this.fotoService.obtenerUrlCompleta('usuario', buscarUsuarioByEmail.id, buscarUsuarioByEmail.nombre_imagen)
+          : null
       };
 
     } catch (error) {
@@ -177,7 +187,7 @@ export class UsuarioService {
     }
   }
 
-  private async usuarioExistenteAlCrear(email: string, numero_documento: string, telefono: string){
+  private async usuarioExistenteAlCrear(email: string, numero_documento: string, telefono: string) {
 
     const [usuarioExistente] = await this.db
       .select({
@@ -193,24 +203,24 @@ export class UsuarioService {
           eq(UsuarioTable.telefono, telefono)
         )
       )
-  
+
     if (usuarioExistente) {
       const errores: Record<string, string>[] = [];
       if (usuarioExistente.email === email) {
-        errores.push({errorEmail: "El email ya está registrado."});
+        errores.push({ errorEmail: "El email ya está registrado." });
       }
       if (usuarioExistente.numero_documento === numero_documento) {
-        errores.push({errorNumeroDocumento: "El número de documento ya está registrado."});
+        errores.push({ errorNumeroDocumento: "El número de documento ya está registrado." });
       }
-      if(usuarioExistente.telefono === telefono){
-        errores.push({errorTelefono: "El número de telefono ya está registrado."})
+      if (usuarioExistente.telefono === telefono) {
+        errores.push({ errorTelefono: "El número de telefono ya está registrado." })
       }
       throw new BadRequestException({ message: "Errores de validación", errors: errores });
     }
 
   }
 
-  private async usuarioExistenteAlActualizar(id: number, email?: string, numero_documento?: string, telefono?: string){
+  private async usuarioExistenteAlActualizar(id: number, email?: string, numero_documento?: string, telefono?: string) {
 
     const condiciones: SQL[] = [];
 
@@ -223,7 +233,7 @@ export class UsuarioService {
     if (telefono) {
       condiciones.push(eq(UsuarioTable.telefono, telefono));
     }
-    
+
     if (condiciones.length === 0) {
       return;
     }
@@ -241,38 +251,38 @@ export class UsuarioService {
           or(...condiciones)
         )
       )
-  
+
     if (usuarioExistente) {
       const errores: Record<string, string>[] = [];
       if (usuarioExistente.email === email) {
-        errores.push({errorEmail: "El email ya está registrado."});
+        errores.push({ errorEmail: "El email ya está registrado." });
       }
       if (usuarioExistente.numero_documento === numero_documento) {
-        errores.push({errorNumeroDocumento: "El número de documento ya está registrado."});
+        errores.push({ errorNumeroDocumento: "El número de documento ya está registrado." });
       }
-      if(usuarioExistente.telefono === telefono){
-        errores.push({errorTelefono: "El número de telefono ya está registrado."})
+      if (usuarioExistente.telefono === telefono) {
+        errores.push({ errorTelefono: "El número de telefono ya está registrado." })
       }
       throw new BadRequestException({ message: "Errores de validación", errors: errores });
     }
 
   }
 
-  async createUsuario(createUsuarioDto: CreateUsuarioDto, fotoUsuario: Express.Multer.File, empresaId: number){
+  async createUsuario(createUsuarioDto: CreateUsuarioDto, fotoUsuario: Express.Multer.File, empresaId: number) {
 
     try {
       if (!fotoUsuario) {
         throw new BadRequestException(`Es necesario una foto para registrar usuario`);
       }
-      
+
       const verificationToken = uuidv4();
 
       const hashedPassword = await bcrypt.hash(createUsuarioDto.numero_documento, 10);
 
       const nombreCompleto = `${createUsuarioDto.nombre} ${createUsuarioDto.apellido}`
-      
+
       await this.usuarioExistenteAlCrear(createUsuarioDto.email, createUsuarioDto.numero_documento, createUsuarioDto.telefono)
-      
+
       const [createUsuario] = await this.db
         .insert(UsuarioTable)
         .values({
@@ -295,14 +305,14 @@ export class UsuarioService {
           distrito: createUsuarioDto.distrito,
           // Contacto
           telefono: createUsuarioDto.telefono,
-          email: createUsuarioDto.email,   
+          email: createUsuarioDto.email,
           // Autenticación
           password: hashedPassword,
           token_verificacion_email: verificationToken,
           token_expiry_email: new Date(Date.now() + 86400000),
         })
         .returning();
-        
+
       const imagen_url = await this.fotoService.guardarImagen(createUsuario.id, 'usuario', fotoUsuario)
       //Registar foto de perfil
       await this.updateNombrefotoUsuario(createUsuario.id, { foto_url: imagen_url })
@@ -326,7 +336,7 @@ export class UsuarioService {
 
   }
 
-  async updateNombrefotoUsuario(id: number, fotoDto: FotoDto){
+  async updateNombrefotoUsuario(id: number, fotoDto: FotoDto) {
     try {
 
       const [foto] = await this.db
@@ -346,7 +356,7 @@ export class UsuarioService {
     }
   }
 
-  async updateUsuario(id: number, updateUsuarioDto: UpdateUsuarioDto, empresaId: number, fotoUsuario?: Express.Multer.File){
+  async updateUsuario(id: number, updateUsuarioDto: UpdateUsuarioDto, empresaId: number, fotoUsuario?: Express.Multer.File) {
 
     try {
 
@@ -367,11 +377,11 @@ export class UsuarioService {
           tipo_documento: updateUsuarioDto.tipo_documento,
           numero_documento: updateUsuarioDto.numero_documento,
           // Fechas convertidas a string (si existen en el DTO)
-          fecha_nacimiento: updateUsuarioDto.fecha_nacimiento 
-            ? updateUsuarioDto.fecha_nacimiento.toISOString().split('T')[0] 
+          fecha_nacimiento: updateUsuarioDto.fecha_nacimiento
+            ? updateUsuarioDto.fecha_nacimiento.toISOString().split('T')[0]
             : undefined,
-          fecha_ingreso: updateUsuarioDto.fecha_ingreso 
-            ? updateUsuarioDto.fecha_ingreso.toISOString().split('T')[0] 
+          fecha_ingreso: updateUsuarioDto.fecha_ingreso
+            ? updateUsuarioDto.fecha_ingreso.toISOString().split('T')[0]
             : undefined,
           // Ubicación
           direccion: updateUsuarioDto.direccion,
@@ -400,7 +410,7 @@ export class UsuarioService {
 
   }
 
-  async updatePasswordProfile(usuarioId: number, updatePasswordDto: UpdatePasswordDto){
+  async updatePasswordProfile(usuarioId: number, updatePasswordDto: UpdatePasswordDto) {
 
     try {
 
@@ -408,7 +418,7 @@ export class UsuarioService {
 
       // Hashear la nueva contraseña
       const hashedPassword = await bcrypt.hash(updatePasswordDto.password, 10);
-      
+
       const [updatePassword] = await this.db
         .update(UsuarioTable)
         .set({
@@ -428,7 +438,7 @@ export class UsuarioService {
 
   }
 
-  async restaurarUsuario(id: number){
+  async restaurarUsuario(id: number) {
     try {
 
       await this.findUniqueUsuario(id, false)
@@ -452,11 +462,11 @@ export class UsuarioService {
     }
   }
 
-  async remove(id: number){
+  async remove(id: number) {
     try {
 
       await this.findUniqueUsuario(id, true)
-      
+
       await this.db
         .update(UsuarioTable)
         .set({
