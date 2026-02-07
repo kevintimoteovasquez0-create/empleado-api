@@ -5,7 +5,6 @@ import { FotoService } from '../foto/foto.service';
 import { EmailService } from '../email/email.service';
 import { FotoDto } from '../common/dto/foto.dto';
 import * as bcrypt from 'bcryptjs';
-import { addMinutes } from 'date-fns';
 import { UpdatePasswordDto } from './dto/update-password.dto';
 import { PaginationUsuarioDto } from './dto/pagination-usuario.dto';
 import { envs } from '../config';
