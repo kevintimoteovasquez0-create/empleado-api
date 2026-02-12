@@ -1,9 +1,16 @@
-import { pgTable, integer, varchar, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import {
+  pgTable,
+  integer,
+  varchar,
+  boolean,
+  timestamp,
+  pgEnum,
+} from 'drizzle-orm/pg-core';
 
-export const AplicaParaEnum = pgEnum("aplica_para", [
-  "PLANILLA",
-  "PRACTICANTE",
-  "AMBOS"
+export const AplicaParaEnum = pgEnum('aplica_para', [
+  'PLANILLA',
+  'PRACTICANTE',
+  'AMBOS',
 ]);
 
 export const RequisitoDocumentoTable = pgTable('requisito_documento', {
@@ -14,6 +21,9 @@ export const RequisitoDocumentoTable = pgTable('requisito_documento', {
   aplica_para: AplicaParaEnum().notNull(),
   orden_visualizacion: integer('orden_visualizacion').notNull(),
   estado_registro: boolean('estado_registro').default(true).notNull(),
-  created_at: timestamp('createdAt').defaultNow().notNull(),
-  updated_at: timestamp('updatedAt').defaultNow().$onUpdate(() => new Date()).notNull() 
+  createdAt: timestamp('createdAt').defaultNow().notNull(),
+  updatedAt: timestamp('updatedAt')
+    .defaultNow()
+    .$onUpdate(() => new Date())
+    .notNull(),
 });
