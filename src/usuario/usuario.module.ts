@@ -4,9 +4,11 @@ import { UsuarioController } from './usuario.controller';
 import { FotoModule } from '../foto/foto.module';
 import { EmailModule } from '../email/email.module';
 import { DrizzleModule } from '../drizzle/drizzle.module';
+import { CommonModule } from 'src/common/common.module';
+import { CloudinaryModule } from 'src/cloudinary/cloudinary.module';
 
 @Module({
-  imports: [DrizzleModule, forwardRef(() => FotoModule), EmailModule],
+  imports: [DrizzleModule, CloudinaryModule, EmailModule, CommonModule],
   controllers: [UsuarioController],
   providers: [UsuarioService],
   exports: [UsuarioService],

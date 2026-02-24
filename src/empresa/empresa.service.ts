@@ -5,15 +5,14 @@ import { DrizzleService } from 'src/drizzle/drizzle.service';
 import { EmpresaTable } from 'src/drizzle/schema/empresa';
 import { and, eq, count } from 'drizzle-orm';
 import { PaginationEmpresaDto } from './dto/pagination-empresa.dto';
+import { BaseDrizzleService } from 'src/drizzle/base_drizzle.service';
 
 @Injectable()
-export class EmpresaService {
+export class EmpresaService extends BaseDrizzleService{
 
-  constructor(private readonly drizzleService: DrizzleService) { }
-
-  private get db() {
-    return this.drizzleService.getDb();
-  }
+  constructor(drizzleService: DrizzleService) {
+    super(drizzleService)
+   }
 
   async findAllEmpresa(paginationEmpresaDto: PaginationEmpresaDto, estado: boolean) {
 

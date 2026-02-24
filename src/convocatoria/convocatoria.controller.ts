@@ -6,11 +6,15 @@ import { CreateConvocatoriaDto } from './dto/create-convocatoria.dto';
 import { UpdateConvocatoriaDto } from './dto/update-convocatoria.dto';
 import { CreatePostulacionDto } from 'src/postulacion/dto/create-postulacion.dto';
 import { PaginationDto } from 'src/common';
+import { PostulacionService } from 'src/postulacion/postulacion.service';
 
 @ApiTags('Convocatorias')
 @Controller('convocatoria')
 export class ConvocatoriaController {
-  constructor(private readonly convocatoriaService: ConvocatoriaService) { }
+  constructor(
+    private readonly convocatoriaService: ConvocatoriaService,
+    private readonly postulacionService: PostulacionService
+  ) { }
 
   @Get()
   @ApiOperation({
@@ -204,7 +208,7 @@ export class ConvocatoriaController {
     @Param("id", ParseIntPipe) id: number,
     @Body() createPostulacionDto: CreatePostulacionDto
   ) {
-    return this.convocatoriaService.convocatoriaPostular(id, createPostulacionDto)
+    return this.postulacionService.createPostulacion(id, createPostulacionDto)
   }
 
    @Get(":id/postulacion")
@@ -232,7 +236,7 @@ export class ConvocatoriaController {
       @Query("estado", ParseBoolPipe) estado: boolean
     ) {
       const estadoActual = estado ?? true
-      return this.convocatoriaService.obtenerPostulacionesConvocatorias(id, estadoActual, paginationDto)
+      return this.postulacionService.findAllPostulaciones(paginationDto, estado, id)
     }
 
 }

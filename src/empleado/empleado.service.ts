@@ -7,22 +7,20 @@ import { AreaTable } from 'src/drizzle/schema/area';
 import { EmpleadoTable } from 'src/drizzle/schema/empleado';
 import { CreateEmpleadoDto } from './dto/create-empleado.dto';
 import { UpdateEmpleadoDto } from './dto/update-empleado.dto';
-import { number } from 'joi';
+import { ValidarUniqueService } from 'src/common/validar_unique.service';
+import { BaseDrizzleService } from 'src/drizzle/base_drizzle.service';
 
 @Injectable()
-export class EmpleadoService {
+export class EmpleadoService extends BaseDrizzleService{
 
   constructor(
-    private readonly drizzleService: DrizzleService,
-    // private readonly documentoService: DocumentoService
-  ) { }
-
-  private get db() {
-    return this.drizzleService.getDb();
+    drizzleService: DrizzleService,
+    private readonly validarUniqueService: ValidarUniqueService,
+  ) { 
+    super(drizzleService)
   }
 
   async findAllEmpleados(paginationDto: PaginationDto, estado: boolean, areaID?: number) {
-    try {
 
       const { page, limit } = paginationDto
 
@@ -44,7 +42,7 @@ export class EmpleadoService {
         eq(EmpleadoTable.estado_registro, estado),
       ]
 
-      if(areaID){
+      if (areaID) {
         condiciones.push(eq(EmpleadoTable.area_id, areaID))
       }
 
@@ -75,17 +73,9 @@ export class EmpleadoService {
           pageActual: numberPages
         }
       }
-
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
-      );
-    }
   }
 
   async findEmpleadosById(id: number, estado: boolean) {
-    try {
 
       const { area_id, ...restoCamposArea } = getTableColumns(EmpleadoTable)
 
@@ -111,21 +101,23 @@ export class EmpleadoService {
       }
 
       return response
-
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
-      );
-    }
   }
 
-  async createEmpleados(createEmpleadosDto: CreateEmpleadoDto) {
+  async createEmpleados(createEmpleadoDto: CreateEmpleadoDto) {
     try {
+
+      await this.validarUniqueService.validarDatosUnicos({
+        dto: createEmpleadoDto,
+        table: EmpleadoTable,
+        idColumn: EmpleadoTable.id,
+        uniqueFields: [
+          { field: "numero_documento", column: EmpleadoTable.numero_documento }
+        ]
+      })
 
       await this.db
         .insert(EmpleadoTable)
-        .values({ ...createEmpleadosDto })
+        .values({ ...createEmpleadoDto })
 
       return {
         message: "Área creada correctamente"
@@ -141,7 +133,17 @@ export class EmpleadoService {
 
   async updateEmpleados(id: number, updateEmpleadosDto: UpdateEmpleadoDto) {
     try {
+
       await this.findEmpleadosById(id, true)
+
+      await this.validarUniqueService.validarDatosUnicos({
+        dto: updateEmpleadosDto,
+        table: EmpleadoTable,
+        idColumn: EmpleadoTable.id,
+        uniqueFields: [
+          { field: "numero_documento", column: EmpleadoTable.numero_documento }
+        ]
+      })
 
       await this.db
         .update(EmpleadoTable)
@@ -208,18 +210,5 @@ export class EmpleadoService {
   async actualizarAuditoriaProgreso() {
 
   }
-
-  //Funciones extras
-
-  // async obtenerDocumentosEmpleados(id: number) {
-  //   try {
-  //     await this.findEmpleadosById(id, true)
-  //     return this.documentoService.obtenerDocumentoEmpleado(id)
-
-  //   } catch (error) {
-  //     throw new InternalServerErrorException(`Ocurrió un error con el sistema: ${error}`)
-  //   }
-
-  // }
 
 }

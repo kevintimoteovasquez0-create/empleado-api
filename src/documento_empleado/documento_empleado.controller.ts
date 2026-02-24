@@ -1,75 +1,38 @@
 import {
   Body,
   Controller,
-  Delete,
+  DefaultValuePipe,
   Get,
   Param,
+  ParseBoolPipe,
   ParseIntPipe,
   Patch,
   Post,
   Put,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
-  ApiQuery,
   ApiBody,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { DocumentoEmpleadoService } from './documento_empleado.service';
-import { PaginationDto } from 'src/common';
+
 import { CreateDocumentoEmpleadoDto } from './dto/create-documento-empleado.dto';
 import { UpdateDocumentoEmpleadoDto } from './dto/update-documento-empleado.dto';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Documento Empleado')
 @Controller('documento-empleado')
 export class DocumentoEmpleadoController {
   constructor(
     private readonly documentoEmpleadoService: DocumentoEmpleadoService,
-  ) {}
-
-  @Get()
-  @ApiOperation({
-    summary: 'Obtener todos los documentos de empleados',
-    description:
-      'Retorna una lista paginada de documentos de empleados. Se puede filtrar por empleado_id y estado.',
-  })
-  @ApiQuery({
-    name: 'empleado_id',
-    required: false,
-    type: Number,
-    description: 'Filtrar por ID del empleado',
-    example: 1,
-  })
-  @ApiQuery({
-    name: 'estado',
-    required: false,
-    type: String,
-    description: 'Filtrar por estado (PENDIENTE, COMPLETO, OBSERVADO)',
-    example: 'PENDIENTE',
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Lista de documentos obtenida exitosamente',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Parámetros de consulta inválidos',
-  })
-  findAllDocumentosEmpleado(
-    @Query() paginationDto: PaginationDto,
-    @Query('empleado_id') empleadoId?: string,
-    @Query('estado') estado?: string,
-  ) {
-    const empleadoIdNumber = empleadoId ? parseInt(empleadoId) : undefined;
-    return this.documentoEmpleadoService.findAllDocumentosEmpleado(
-      paginationDto,
-      empleadoIdNumber,
-      estado,
-    );
-  }
+  ) { }
 
   @Get(':id')
   @ApiOperation({
@@ -91,37 +54,15 @@ export class DocumentoEmpleadoController {
     status: 404,
     description: 'Documento no encontrado',
   })
-  findDocumentoEmpleadoById(@Param('id', ParseIntPipe) id: number) {
-    return this.documentoEmpleadoService.findDocumentoEmpleadoById(id);
-  }
-
-  @Get('empleado/:empleadoId')
-  @ApiOperation({
-    summary: 'Obtener todos los documentos de un empleado',
-    description:
-      'Retorna todos los documentos asociados a un empleado específico',
-  })
-  @ApiParam({
-    name: 'empleadoId',
-    type: Number,
-    description: 'ID del empleado',
-    example: 1,
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Documentos del empleado obtenidos exitosamente',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Empleado no encontrado',
-  })
-  findDocumentosByEmpleadoId(
-    @Param('empleadoId', ParseIntPipe) empleadoId: number,
+  findDocumentoEmpleadoById(
+    @Param('id', ParseIntPipe) id: number,
+    @Query("estado", new DefaultValuePipe(true), ParseBoolPipe) estado: boolean
   ) {
-    return this.documentoEmpleadoService.findDocumentosByEmpleadoId(empleadoId);
+    return this.documentoEmpleadoService.findDocumentoEmpleadoById(id, estado);
   }
 
   @Post()
+  @UseInterceptors(FileInterceptor("file"))
   @ApiOperation({
     summary: 'Crear un nuevo documento de empleado',
     description:
@@ -142,13 +83,13 @@ export class DocumentoEmpleadoController {
   })
   createDocumentoEmpleado(
     @Body() createDocumentoEmpleadoDto: CreateDocumentoEmpleadoDto,
+    @UploadedFile() file: Express.Multer.File
   ) {
-    return this.documentoEmpleadoService.createDocumentoEmpleado(
-      createDocumentoEmpleadoDto,
-    );
+    return this.documentoEmpleadoService.createDocumentoEmpleado(createDocumentoEmpleadoDto, file);
   }
 
   @Put(':id')
+  @UseInterceptors(FileInterceptor('file'))
   @ApiOperation({
     summary: 'Actualizar un documento de empleado',
     description: 'Actualiza completamente un documento de empleado existente',
@@ -178,70 +119,9 @@ export class DocumentoEmpleadoController {
   updateDocumentoEmpleado(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDocumentoEmpleadoDto: UpdateDocumentoEmpleadoDto,
+    @UploadedFile() file: Express.Multer.File
   ) {
-    return this.documentoEmpleadoService.updateDocumentoEmpleado(
-      id,
-      updateDocumentoEmpleadoDto,
-    );
-  }
-
-  @Patch(':id/estado')
-  @ApiOperation({
-    summary: 'Cambiar estado de un documento',
-    description:
-      'Actualiza el estado de un documento (PENDIENTE, COMPLETO, OBSERVADO) y opcionalmente agrega observación y revisor',
-  })
-  @ApiParam({
-    name: 'id',
-    type: Number,
-    description: 'ID del documento',
-    example: 1,
-  })
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        estado: {
-          type: 'string',
-          enum: ['PENDIENTE', 'COMPLETO', 'OBSERVADO'],
-          example: 'COMPLETO',
-        },
-        observacion: {
-          type: 'string',
-          example: 'Documento aprobado correctamente',
-        },
-        revisado_por: {
-          type: 'number',
-          example: 5,
-        },
-      },
-      required: ['estado'],
-    },
-  })
-  @ApiResponse({
-    status: 200,
-    description: 'Estado del documento actualizado exitosamente',
-  })
-  @ApiResponse({
-    status: 404,
-    description: 'Documento no encontrado',
-  })
-  @ApiResponse({
-    status: 400,
-    description: 'Estado inválido',
-  })
-  cambiarEstadoDocumento(
-    @Param('id', ParseIntPipe) id: number,
-    @Body('estado') estado: 'PENDIENTE' | 'COMPLETO' | 'OBSERVADO',
-    @Body('observacion') observacion?: string,
-    @Body('revisado_por') revisadoPor?: number,
-  ) {
-    return this.documentoEmpleadoService.cambiarEstadoDocumento(
-      id,
-      estado,
-      observacion,
-      revisadoPor,
-    );
+    return this.documentoEmpleadoService.updateDocumentoEmpleado(id, updateDocumentoEmpleadoDto, file);
   }
 
   @Patch(':id/remove')
@@ -290,4 +170,32 @@ export class DocumentoEmpleadoController {
   restoreDocumentoEmpleado(@Param('id', ParseIntPipe) id: number) {
     return this.documentoEmpleadoService.restoreDocumentoEmpleado(id);
   }
+
+
+  //Api documentos por empleadoID
+  @Get("empleado/:id/documentos")
+  @ApiOperation({ summary: 'Obtener documentos de un empleado' })
+  @ApiParam({ name: 'id', type: Number, description: 'ID del empleado' })
+  @ApiQuery({ name: 'estado', type: Boolean, required: false, description: 'Estado del documento', example: true })
+  @ApiResponse({ status: 200, description: 'Documentos obtenidos correctamente' })
+  @ApiResponse({ status: 404, description: 'Empleado no encontrado' })
+  getDocumentosByEmpleadoID(
+    @Param("id", ParseIntPipe) id: number,
+    @Query("estado", new DefaultValuePipe(true), ParseBoolPipe) estado: boolean
+  ) {
+    return this.documentoEmpleadoService.getDocumentosByEmpleadoID(id, estado)
+  }
+
+  @Get("empleado/:id/requisitos")
+  @ApiOperation({ summary: 'Obtener requisitos de un empleado con su estado de documento' })
+  @ApiParam({ name: 'id', type: Number, description: 'ID del empleado' })
+  @ApiResponse({ status: 200, description: 'Requisitos obtenidos correctamente' })
+  @ApiResponse({ status: 404, description: 'Empleado no encontrado' })
+  getRequisitosDocumentosByEmpleadoID(
+    @Param("id", ParseIntPipe) id: number,
+  ) {
+    return this.documentoEmpleadoService.getRequisitosDocumentosByEmpleadoID(id)
+  }
+
+
 }

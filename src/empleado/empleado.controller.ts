@@ -8,7 +8,9 @@ import { ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse, ApiTags } from 
 @ApiTags('Empleados')
 @Controller('empleado')
 export class EmpleadoController {
-  constructor(private readonly empleadoService: EmpleadoService) { }
+  constructor(
+    private readonly empleadoService: EmpleadoService,
+  ) { }
 
   @Get()
   @ApiOperation({
@@ -185,14 +187,5 @@ export class EmpleadoController {
   ) {
     return this.empleadoService.removeEmpleados(id)
   }
-
-  //Apis extras
-
-  // @Get(":id/documentos")
-  // obtenerDocumentosEmpleados(
-  //   @Param("id", ParseIntPipe) id: number
-  // ) {
-  //   return this.empleadoService.obtenerDocumentosEmpleados(id)
-  // }
 }
 

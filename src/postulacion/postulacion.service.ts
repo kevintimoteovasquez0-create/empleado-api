@@ -1,4 +1,4 @@
-import {Injectable, NotFoundException, InternalServerErrorException, HttpException} from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, HttpException } from '@nestjs/common';
 import { and, getTableColumns } from 'drizzle-orm';
 import { count, eq } from 'drizzle-orm';
 import { PaginationDto } from 'src/common';
@@ -8,36 +8,19 @@ import { CreatePostulacionDto } from './dto/create-postulacion.dto';
 import { PostulacionTable } from 'src/drizzle/schema/postulacion';
 import { AreaTable } from 'src/drizzle/schema/area';
 import { UpdateEstadoPostulacionDto } from './dto/update-estado-postulacion.dto';
+import { BaseDrizzleService } from 'src/drizzle/base_drizzle.service';
 
 @Injectable()
-export class PostulacionService {
+export class PostulacionService extends BaseDrizzleService {
   constructor(
-    private readonly drizzleService: DrizzleService,
-  ) { }
-
-  private get db() {
-    return this.drizzleService.getDb();
+    drizzleService: DrizzleService,
+  ) { 
+    super(drizzleService)
   }
 
   async findAllPostulaciones(paginationDto: PaginationDto, estado: boolean, areaId?: number, convocatoriaId?: number
   ) {
     try {
-      const { page, limit } = paginationDto;
-
-      const [{ total }] = await this.db
-        .select({ total: count() })
-        .from(PostulacionTable)
-        .where(eq(PostulacionTable.estado_registro, estado));
-
-      const getAllRegistrosPostulaciones = Number(total);
-
-      const finalPage = page ?? 1;
-      const finalLimit = limit ?? 10;
-
-      const numberPages = Math.ceil(getAllRegistrosPostulaciones / finalLimit);
-
-      const { convocatoria_id, ...restoCamposPostulacion } = getTableColumns(PostulacionTable);
-
       const condiciones = [
         eq(PostulacionTable.estado_registro, estado)
       ]
@@ -49,6 +32,22 @@ export class PostulacionService {
       if (convocatoriaId) {
         condiciones.push(eq(PostulacionTable.convocatoria_id, convocatoriaId))
       }
+
+      const { page, limit } = paginationDto;
+
+      const [{ total }] = await this.db
+        .select({ total: count() })
+        .from(PostulacionTable)
+        .where(and(...condiciones));
+
+      const getAllRegistrosPostulaciones = Number(total);
+
+      const finalPage = page ?? 1;
+      const finalLimit = limit ?? 10;
+
+      const numberPages = Math.ceil(getAllRegistrosPostulaciones / finalLimit);
+
+      const { convocatoria_id, ...restoCamposPostulacion } = getTableColumns(PostulacionTable);
 
       const responsePostulaciones = await this.db
         .select({

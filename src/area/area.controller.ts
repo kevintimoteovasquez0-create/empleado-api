@@ -1,12 +1,18 @@
-import { Body, Controller, Get, Param, ParseBoolPipe, ParseIntPipe, Patch, Post, Put, Query } from '@nestjs/common';
+import { Body, Controller, DefaultValuePipe, Get, Param, ParseBoolPipe, ParseIntPipe, Patch, Post, Put, Query } from '@nestjs/common';
 import { AreaService } from './area.service';
 import { PaginationDto } from 'src/common';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
 import { ApiBody, ApiOperation, ApiParam, ApiQuery, ApiResponse } from '@nestjs/swagger';
+import { EmpleadoService } from 'src/empleado/empleado.service';
+import { PostulacionService } from 'src/postulacion/postulacion.service';
 @Controller('area')
 export class AreaController {
-  constructor(private readonly areaService: AreaService) { }
+  constructor(
+    private readonly areaService: AreaService,
+    private readonly empleadoService: EmpleadoService,
+    private readonly postulacionService: PostulacionService
+  ) { }
 
   @Get()
   @ApiOperation({
@@ -30,11 +36,10 @@ export class AreaController {
   })
   findAllAreas(
     @Query() paginationDto: PaginationDto,
-    @Query("estado", ParseBoolPipe) estado: boolean
+    @Query("estado", new DefaultValuePipe(true) ,ParseBoolPipe) estado: boolean
   ) {
 
-    const estadoValidado = estado ?? true
-    return this.areaService.findAllAreas(paginationDto, estadoValidado);
+    return this.areaService.findAllAreas(paginationDto, estado);
   }
 
   // ----------------------------------------------------
@@ -211,7 +216,7 @@ export class AreaController {
     @Query("estado", ParseBoolPipe) estado: boolean
   ) {
     const estadoActual = estado ?? true
-    return this.areaService.obtenerEmpleadosAreas(id, estadoActual, paginationDto)
+    return this.empleadoService.findAllEmpleados(paginationDto, estado, id)
   }
 
   @Get(":id/postulacion")
@@ -239,6 +244,6 @@ export class AreaController {
     @Query("estado", ParseBoolPipe) estado: boolean
   ) {
     const estadoActual = estado ?? true
-    return this.areaService.obtenerPostulacionesAreas(id, estadoActual, paginationDto)
+    return this.postulacionService.findAllPostulaciones(paginationDto, estado, id)
   }
 }

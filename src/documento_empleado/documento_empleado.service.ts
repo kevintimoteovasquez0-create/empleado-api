@@ -3,367 +3,145 @@ import {
   InternalServerErrorException,
   NotFoundException,
   BadRequestException,
+  HttpException,
 } from '@nestjs/common';
-import { and, count, eq, desc } from 'drizzle-orm';
-import { PaginationDto } from 'src/common';
+import { and, asc, eq, or } from 'drizzle-orm';
 import { DrizzleService } from 'src/drizzle/drizzle.service';
 import { DocumentoEmpleadoTable } from 'src/drizzle/schema/documento_empleado';
 import { RequisitoDocumentoTable } from 'src/drizzle/schema/requisito_documento';
-import { EmpleadoTable } from 'src/drizzle/schema/empleado';
 import { CreateDocumentoEmpleadoDto } from './dto/create-documento-empleado.dto';
 import { UpdateDocumentoEmpleadoDto } from './dto/update-documento-empleado.dto';
+import { getTableColumns } from 'drizzle-orm';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
+import { RequisitoDocumentoService } from 'src/requisito_documento/requisito_documento.service';
+import { BaseDrizzleService } from 'src/drizzle/base_drizzle.service';
+import { EmpleadoService } from 'src/empleado/empleado.service';
+import { number } from 'joi';
+import { EmpleadoTable } from 'src/drizzle/schema/empleado';
 
 @Injectable()
-export class DocumentoEmpleadoService {
-  constructor(private readonly drizzleService: DrizzleService) {}
-
-  private get db() {
-    return this.drizzleService.getDb();
+export class DocumentoEmpleadoService extends BaseDrizzleService {
+  constructor(
+    drizzleService: DrizzleService,
+    private readonly cloudinaryService: CloudinaryService,
+    private readonly requisitoDocumentoService: RequisitoDocumentoService,
+    private readonly empleadoService: EmpleadoService
+  ) {
+    super(drizzleService)
   }
 
-  async findAllDocumentosEmpleado(
-    paginationDto: PaginationDto,
-    empleadoId?: number,
-    estado?: string,
-  ) {
-    try {
-      const { page, limit } = paginationDto;
+  async findDocumentoEmpleadoById(id: number, estado: boolean) {
 
-      let filter;
-      if (
-        typeof empleadoId === 'number' &&
-        estado &&
-        ['PENDIENTE', 'COMPLETO', 'OBSERVADO'].includes(estado)
-      ) {
-        filter = and(
-          eq(DocumentoEmpleadoTable.empleado_id, empleadoId),
-          eq(
-            DocumentoEmpleadoTable.estado,
-            estado as 'PENDIENTE' | 'COMPLETO' | 'OBSERVADO',
-          ),
-          eq(DocumentoEmpleadoTable.estado_registro, true),
-        );
-      } else if (typeof empleadoId === 'number') {
-        filter = and(
-          eq(DocumentoEmpleadoTable.empleado_id, empleadoId),
-          eq(DocumentoEmpleadoTable.estado_registro, true),
-        );
-      } else if (
-        estado &&
-        ['PENDIENTE', 'COMPLETO', 'OBSERVADO'].includes(estado)
-      ) {
-        filter = and(
-          eq(
-            DocumentoEmpleadoTable.estado,
-            estado as 'PENDIENTE' | 'COMPLETO' | 'OBSERVADO',
-          ),
-          eq(DocumentoEmpleadoTable.estado_registro, true),
-        );
-      } else {
-        filter = eq(DocumentoEmpleadoTable.estado_registro, true);
-      }
-
-      const [{ total }] = await this.db
-        .select({ total: count() })
-        .from(DocumentoEmpleadoTable)
-        .where(filter);
-
-      const getAllRegistros = Number(total);
-      const finalPage = page ?? 1;
-      const finalLimit = limit ?? 10;
-      const numberPages = Math.ceil(getAllRegistros / finalLimit);
-
-      const responseDocumentos = await this.db
-        .select({
-          id: DocumentoEmpleadoTable.id,
-          empleado_id: DocumentoEmpleadoTable.empleado_id,
-          requisito_id: DocumentoEmpleadoTable.requisito_id,
-          archivo_pdf: DocumentoEmpleadoTable.archivo_pdf,
-          tipo_archivo: DocumentoEmpleadoTable.tipo_archivo,
-          estado: DocumentoEmpleadoTable.estado,
-          observacion_texto: DocumentoEmpleadoTable.observacion_texto,
-          fecha_subida: DocumentoEmpleadoTable.fecha_subida,
-          revisado_por: DocumentoEmpleadoTable.revisado_por,
-          fecha_revision: DocumentoEmpleadoTable.fecha_revision,
-          createdAt: DocumentoEmpleadoTable.createdAt,
-          updatedAt: DocumentoEmpleadoTable.updatedAt,
-          requisito: {
-            id: RequisitoDocumentoTable.id,
-            nombre: RequisitoDocumentoTable.nombre,
-            descripcion: RequisitoDocumentoTable.descripcion,
-            es_obligatorio: RequisitoDocumentoTable.es_obligatorio,
-          },
-        })
-        .from(DocumentoEmpleadoTable)
-        .leftJoin(
-          RequisitoDocumentoTable,
-          eq(DocumentoEmpleadoTable.requisito_id, RequisitoDocumentoTable.id),
-        )
-        .where(filter)
-        .orderBy(desc(DocumentoEmpleadoTable.fecha_subida))
-        .limit(finalLimit)
-        .offset((finalPage - 1) * finalLimit);
-
-      return {
-        data: responseDocumentos,
-        pagination: {
-          total: getAllRegistros,
-          page: finalPage,
-          limit: finalLimit,
-          finalPage: numberPages,
+    const { requisito_id, ...restoCamposDocumentoEmpleado } = getTableColumns(DocumentoEmpleadoTable)
+    const [response] = await this.db
+      .select({
+        ...restoCamposDocumentoEmpleado,
+        requisito: {
+          id: RequisitoDocumentoTable.id,
+          nombre: RequisitoDocumentoTable.nombre,
+          descripcion: RequisitoDocumentoTable.descripcion,
+          es_obligatorio: RequisitoDocumentoTable.es_obligatorio,
+          aplica_para: RequisitoDocumentoTable.aplica_para,
         },
-      };
-    } catch (error) {
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
+      })
+      .from(DocumentoEmpleadoTable)
+      .innerJoin(
+        RequisitoDocumentoTable,
+        eq(DocumentoEmpleadoTable.requisito_id, RequisitoDocumentoTable.id),
+      )
+      .where(
+        and(
+          eq(DocumentoEmpleadoTable.id, id),
+          eq(DocumentoEmpleadoTable.estado_registro, estado),
+        ),
+      )
+      .limit(1);
+
+    if (!response) {
+      throw new NotFoundException(
+        `No se encontró el documento empleado con id ${id}`,
       );
     }
+
+    return response;
   }
 
-  /**
-   * Obtener un documento por ID con información del requisito
-   */
-  async findDocumentoEmpleadoById(id: number) {
-    try {
-      const [response] = await this.db
-        .select({
-          id: DocumentoEmpleadoTable.id,
-          empleado_id: DocumentoEmpleadoTable.empleado_id,
-          requisito_id: DocumentoEmpleadoTable.requisito_id,
-          archivo_pdf: DocumentoEmpleadoTable.archivo_pdf,
-          tipo_archivo: DocumentoEmpleadoTable.tipo_archivo,
-          estado: DocumentoEmpleadoTable.estado,
-          observacion_texto: DocumentoEmpleadoTable.observacion_texto,
-          fecha_subida: DocumentoEmpleadoTable.fecha_subida,
-          revisado_por: DocumentoEmpleadoTable.revisado_por,
-          fecha_revision: DocumentoEmpleadoTable.fecha_revision,
-          createdAt: DocumentoEmpleadoTable.createdAt,
-          updatedAt: DocumentoEmpleadoTable.updatedAt,
-          requisito: {
-            id: RequisitoDocumentoTable.id,
-            nombre: RequisitoDocumentoTable.nombre,
-            descripcion: RequisitoDocumentoTable.descripcion,
-            es_obligatorio: RequisitoDocumentoTable.es_obligatorio,
-            aplica_para: RequisitoDocumentoTable.aplica_para,
-          },
-        })
-        .from(DocumentoEmpleadoTable)
-        .leftJoin(
-          RequisitoDocumentoTable,
-          eq(DocumentoEmpleadoTable.requisito_id, RequisitoDocumentoTable.id),
-        )
-        .where(
-          and(
-            eq(DocumentoEmpleadoTable.id, id),
-            eq(DocumentoEmpleadoTable.estado_registro, true),
-          ),
-        )
-        .limit(1);
+  async getDocumentosByEmpleadoID(empleadoId: number, estado: boolean) {
 
-      if (!response) {
-        throw new NotFoundException(
-          `No se encontró el documento empleado con id ${id}`,
-        );
-      }
+    await this.empleadoService.findEmpleadosById(empleadoId, true)
+    const { requisito_id, ...restoCamposDocumentoEmpleado } = getTableColumns(DocumentoEmpleadoTable)
 
-      return response;
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
-      );
-    }
+    const documentos = await this.db
+      .select({
+        ...restoCamposDocumentoEmpleado,
+        requisito: {
+          id: RequisitoDocumentoTable.id,
+          nombre: RequisitoDocumentoTable.nombre,
+          es_obligatorio: RequisitoDocumentoTable.es_obligatorio,
+        },
+      })
+      .from(DocumentoEmpleadoTable)
+      .leftJoin(
+        RequisitoDocumentoTable,
+        eq(DocumentoEmpleadoTable.requisito_id, RequisitoDocumentoTable.id),
+      )
+      .where(
+        and(
+          eq(DocumentoEmpleadoTable.empleado_id, empleadoId),
+          eq(DocumentoEmpleadoTable.estado_registro, estado),
+        ),
+      )
+
+    return documentos;
   }
 
-  async findDocumentosByEmpleadoId(empleadoId: number) {
+  async createDocumentoEmpleado(createDocumentoEmpleadoDto: CreateDocumentoEmpleadoDto, file: Express.Multer.File) {
     try {
-      const [empleado] = await this.db
-        .select()
-        .from(EmpleadoTable)
-        .where(eq(EmpleadoTable.id, empleadoId))
-        .limit(1);
 
-      if (!empleado) {
-        throw new NotFoundException(
-          `No se encontró el empleado con id ${empleadoId}`,
-        );
-      }
+      await this.empleadoService.findEmpleadosById(createDocumentoEmpleadoDto.empleado_id, true)
+      await this.requisitoDocumentoService.findRequisitoDocumentoById(createDocumentoEmpleadoDto.requisito_id, true)
 
-      const documentos = await this.db
-        .select({
-          id: DocumentoEmpleadoTable.id,
-          requisito_id: DocumentoEmpleadoTable.requisito_id,
-          archivo_pdf: DocumentoEmpleadoTable.archivo_pdf,
-          tipo_archivo: DocumentoEmpleadoTable.tipo_archivo,
-          estado: DocumentoEmpleadoTable.estado,
-          observacion_texto: DocumentoEmpleadoTable.observacion_texto,
-          fecha_subida: DocumentoEmpleadoTable.fecha_subida,
-          requisito: {
-            id: RequisitoDocumentoTable.id,
-            nombre: RequisitoDocumentoTable.nombre,
-            es_obligatorio: RequisitoDocumentoTable.es_obligatorio,
-          },
-        })
-        .from(DocumentoEmpleadoTable)
-        .leftJoin(
-          RequisitoDocumentoTable,
-          eq(DocumentoEmpleadoTable.requisito_id, RequisitoDocumentoTable.id),
-        )
-        .where(
-          and(
-            eq(DocumentoEmpleadoTable.empleado_id, empleadoId),
-            eq(DocumentoEmpleadoTable.estado_registro, true),
-          ),
-        )
-        .orderBy(desc(DocumentoEmpleadoTable.fecha_subida));
+      const responseFile = await this.cloudinaryService.uploadFile(file)
 
-      return documentos;
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
-      );
-    }
-  }
-
-  async createDocumentoEmpleado(
-    createDocumentoEmpleadoDto: CreateDocumentoEmpleadoDto,
-  ) {
-    try {
-      // VALIDACIÓN 1: Verificar que el empleado exista
-      const [empleado] = await this.db
-        .select()
-        .from(EmpleadoTable)
-        .where(eq(EmpleadoTable.id, createDocumentoEmpleadoDto.empleado_id))
-        .limit(1);
-
-      if (!empleado) {
-        throw new BadRequestException(
-          `El empleado con id ${createDocumentoEmpleadoDto.empleado_id} no existe`,
-        );
-      }
-
-      const [requisito] = await this.db
-        .select()
-        .from(RequisitoDocumentoTable)
-        .where(
-          and(
-            eq(
-              RequisitoDocumentoTable.id,
-              createDocumentoEmpleadoDto.requisito_id,
-            ),
-            eq(RequisitoDocumentoTable.estado_registro, true),
-          ),
-        )
-        .limit(1);
-
-      if (!requisito) {
-        throw new BadRequestException(
-          `El requisito con id ${createDocumentoEmpleadoDto.requisito_id} no existe o está inactivo`,
-        );
-      }
-
-      const [existingDoc] = await this.db
-        .select()
-        .from(DocumentoEmpleadoTable)
-        .where(
-          and(
-            eq(
-              DocumentoEmpleadoTable.empleado_id,
-              createDocumentoEmpleadoDto.empleado_id,
-            ),
-            eq(
-              DocumentoEmpleadoTable.requisito_id,
-              createDocumentoEmpleadoDto.requisito_id,
-            ),
-            eq(DocumentoEmpleadoTable.estado_registro, true),
-          ),
-        )
-        .limit(1);
-
-      if (existingDoc) {
-        throw new BadRequestException(
-          `Ya existe un documento del requisito "${requisito.nombre}" para este empleado`,
-        );
-      }
-
-      const fechaRevision = createDocumentoEmpleadoDto.revisado_por
-        ? new Date()
-        : null;
-
-      await this.db.insert(DocumentoEmpleadoTable).values({
-        ...createDocumentoEmpleadoDto,
-        estado: createDocumentoEmpleadoDto.estado || 'PENDIENTE',
-        fecha_revision: fechaRevision,
-        estado_registro: true,
-      });
+      await this.db
+        .insert(DocumentoEmpleadoTable)
+        .values({
+          ...createDocumentoEmpleadoDto,
+          tipo_archivo: file.mimetype as "pdf",
+          archivo_pdf: responseFile.secure_url
+        });
 
       return {
         message: 'Documento empleado creado correctamente',
       };
     } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      )
-        throw error;
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         `Ocurrió un error con el sistema: ${error}`,
       );
     }
   }
 
-  async updateDocumentoEmpleado(
-    id: number,
-    updateDocumentoEmpleadoDto: UpdateDocumentoEmpleadoDto,
-  ) {
+  async updateDocumentoEmpleado(id: number, updateDocumentoEmpleadoDto: UpdateDocumentoEmpleadoDto, file: Express.Multer.File) {
     try {
-      await this.findDocumentoEmpleadoById(id);
+      const responseDocumentoEmpleado = await this.findDocumentoEmpleadoById(id, true);
 
-      if (updateDocumentoEmpleadoDto.empleado_id) {
-        const [empleado] = await this.db
-          .select()
-          .from(EmpleadoTable)
-          .where(eq(EmpleadoTable.id, updateDocumentoEmpleadoDto.empleado_id))
-          .limit(1);
+      const { empleado_id, requisito_id, ...restoCamposUpdateDocumentoEmpleado } = updateDocumentoEmpleadoDto
 
-        if (!empleado) {
-          throw new BadRequestException(
-            `El empleado con id ${updateDocumentoEmpleadoDto.empleado_id} no existe`,
-          );
-        }
-      }
+      const validadoEmpleadoID = empleado_id ?? responseDocumentoEmpleado.empleado_id
+      const validadoRequisitoID = requisito_id ?? responseDocumentoEmpleado.requisito.id
 
-      if (updateDocumentoEmpleadoDto.requisito_id) {
-        const [requisito] = await this.db
-          .select()
-          .from(RequisitoDocumentoTable)
-          .where(
-            and(
-              eq(
-                RequisitoDocumentoTable.id,
-                updateDocumentoEmpleadoDto.requisito_id,
-              ),
-              eq(RequisitoDocumentoTable.estado_registro, true),
-            ),
-          )
-          .limit(1);
+      await this.empleadoService.findEmpleadosById(validadoEmpleadoID, true)
+      await this.requisitoDocumentoService.findRequisitoDocumentoById(validadoRequisitoID, true)
 
-        if (!requisito) {
-          throw new BadRequestException(
-            `El requisito con id ${updateDocumentoEmpleadoDto.requisito_id} no existe o está inactivo`,
-          );
-        }
-      }
-
-      const updateData: any = { ...updateDocumentoEmpleadoDto };
-      if (updateDocumentoEmpleadoDto.revisado_por) {
-        (updateData as any).fecha_revision = new Date();
-      }
+      const responseFile = await this.cloudinaryService.uploadFile(file)
 
       await this.db
         .update(DocumentoEmpleadoTable)
-        .set(updateData)
+        .set({
+          ...restoCamposUpdateDocumentoEmpleado,
+          archivo_pdf: responseFile.secure_url
+        })
         .where(eq(DocumentoEmpleadoTable.id, id));
 
       return {
@@ -381,47 +159,9 @@ export class DocumentoEmpleadoService {
     }
   }
 
-  async cambiarEstadoDocumento(
-    id: number,
-    estado: 'PENDIENTE' | 'COMPLETO' | 'OBSERVADO',
-    observacion?: string,
-    revisadoPor?: number,
-  ) {
-    try {
-      await this.findDocumentoEmpleadoById(id);
-
-      const updateData: any = {
-        estado,
-        fecha_revision: new Date(),
-      };
-
-      if (observacion) {
-        (updateData as any).observacion_texto = observacion;
-      }
-
-      if (revisadoPor) {
-        (updateData as any).revisado_por = revisadoPor;
-      }
-
-      await this.db
-        .update(DocumentoEmpleadoTable)
-        .set(updateData)
-        .where(eq(DocumentoEmpleadoTable.id, id));
-
-      return {
-        message: `Estado del documento cambiado a ${estado} correctamente`,
-      };
-    } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
-      );
-    }
-  }
-
   async removeDocumentoEmpleado(id: number) {
     try {
-      await this.findDocumentoEmpleadoById(id);
+      await this.findDocumentoEmpleadoById(id, true);
 
       await this.db
         .update(DocumentoEmpleadoTable)
@@ -441,22 +181,8 @@ export class DocumentoEmpleadoService {
 
   async restoreDocumentoEmpleado(id: number) {
     try {
-      const [documento] = await this.db
-        .select()
-        .from(DocumentoEmpleadoTable)
-        .where(
-          and(
-            eq(DocumentoEmpleadoTable.id, id),
-            eq(DocumentoEmpleadoTable.estado_registro, false),
-          ),
-        )
-        .limit(1);
 
-      if (!documento) {
-        throw new NotFoundException(
-          `No se encontró el documento empleado con id ${id} o ya está activo`,
-        );
-      }
+      await this.findDocumentoEmpleadoById(id, false)
 
       await this.db
         .update(DocumentoEmpleadoTable)
@@ -466,6 +192,7 @@ export class DocumentoEmpleadoService {
       return {
         message: 'Documento empleado restaurado correctamente',
       };
+
     } catch (error) {
       if (error instanceof NotFoundException) throw error;
       throw new InternalServerErrorException(
@@ -473,4 +200,36 @@ export class DocumentoEmpleadoService {
       );
     }
   }
+
+
+  async getRequisitosDocumentosByEmpleadoID(empleadoID: number) {
+    
+    const obtenerEmpleado = await this.empleadoService.findEmpleadosById(empleadoID, true)
+
+    const requisitoDocumento = getTableColumns(RequisitoDocumentoTable)
+
+    const response = await this.db
+    .select({
+      ...requisitoDocumento,
+      estado: DocumentoEmpleadoTable.estado,
+      archivo_pdf: DocumentoEmpleadoTable.archivo_pdf
+    })
+    .from(RequisitoDocumentoTable)
+    .leftJoin(DocumentoEmpleadoTable, and(
+      eq(DocumentoEmpleadoTable.requisito_id, RequisitoDocumentoTable.id),
+      eq(DocumentoEmpleadoTable.empleado_id, empleadoID)
+    ))
+    .where(
+      or(
+        eq(RequisitoDocumentoTable.aplica_para, obtenerEmpleado.tipo_personal),
+        eq(RequisitoDocumentoTable.aplica_para, "AMBOS")
+      )
+    )
+    .orderBy(asc(RequisitoDocumentoTable.orden_visualizacion))
+
+    return {
+     data: response
+    }
+  }
+
 }

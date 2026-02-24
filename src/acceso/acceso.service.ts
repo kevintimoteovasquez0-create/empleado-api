@@ -1,24 +1,19 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { BaseDrizzleService } from 'src/drizzle/base_drizzle.service';
 import { DrizzleService } from 'src/drizzle/drizzle.service';
 import { AccesoTable } from 'src/drizzle/schema/acceso';
 
 @Injectable()
-export class AccesoService {
+export class AccesoService extends BaseDrizzleService{
 
-  constructor(private readonly drizzleService: DrizzleService) {}
-
-  private get db(){
-    return this.drizzleService.getDb()
-  }
+  constructor(
+    drizzleService: DrizzleService
+  ) {
+    super(drizzleService)
+   }
 
   async findAllAccesos() {
-    try {
-      const accesos = await this.db.select().from(AccesoTable);
-      return { data: accesos };
-    } catch (error) {
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
-      );
-    }
+    const accesos = await this.db.select().from(AccesoTable);
+    return { data: accesos };
   }
 }

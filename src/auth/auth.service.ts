@@ -28,20 +28,19 @@ import { VerifyRecoveryCodeDto } from './dto/verify_recovery_code.dto';
 import { ConfirmTwoFactorDto } from './dto/confirm_two_factor.dto';
 import { DisableTwoFactorDto } from './dto/disable_two_factor.dto';
 import { RegenerateRecoveryCodesDto } from './dto/regenerate_recovery_codes.dto';
+import { BaseDrizzleService } from 'src/drizzle/base_drizzle.service';
+import { EmpleadoTable } from 'src/drizzle/schema/empleado';
 
 @Injectable()
-export class AuthService {
+export class AuthService extends BaseDrizzleService {
 
   constructor(
-    private readonly drizzleService: DrizzleService,
+    drizzleService: DrizzleService,
     private readonly emailService: EmailService,
     private readonly usuarioService: UsuarioService,
     private readonly jwtService: JwtService,
   ) {
-  }
-
-  private get db() {
-    return this.drizzleService.getDb()
+    super(drizzleService)
   }
 
   private setCookieJWT(res: Response, token: string): void {
@@ -136,12 +135,19 @@ export class AuthService {
 
       const token = await this.generateToken(data);
 
+      const [empleado] = await this.db
+        .select()
+        .from(EmpleadoTable)
+        .where(eq(EmpleadoTable.usuario_id, usuario.responseBuscarUsuarioByEmail.id))
+        .limit(1)
+
       // Establecer el token en una cookie segura
       this.setCookieJWT(res, token);
 
       return res.send({
         message: 'Inicio de sesión exitoso',
-        data: data
+        data: data,
+        empleado_id: empleado?.id ?? null
       });
 
     } catch (error) {
@@ -149,7 +155,8 @@ export class AuthService {
         throw error; // Mantener el estado HTTP 401
       }
 
-      throw new InternalServerErrorException(`Ocurrio un error al hacer login: ${error}`);
+      console.log(error)
+      throw new InternalServerErrorException("Ocurrio un error al hacer login");
     }
   }
 
