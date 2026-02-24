@@ -8,8 +8,8 @@ export enum DocumentoEnumDto {
 }
 
 export enum TipoPersonalEnum {
-  PLANILLA = 'planilla',
-  PRACTICANTE = 'practicante',
+  PLANILLA = 'PLANILLA',
+  PRACTICANTE = 'PRACTICANTE',
 }
 
 export enum EstadoLegajoEnum {

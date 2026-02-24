@@ -1,4 +1,4 @@
-import { BadRequestException, forwardRef, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateUsuarioDto } from './dto/create-usuario.dto';
 import { v4 as uuidv4 } from 'uuid';
 import { FotoService } from '../foto/foto.service';
@@ -12,261 +12,159 @@ import { DrizzleService } from 'src/drizzle/drizzle.service';
 import { UsuarioTable } from 'src/drizzle/schema/usuario';
 import { RolTable } from 'src/drizzle/schema/rol';
 import { EmpresaTable } from 'src/drizzle/schema/empresa';
-import { and, eq, gte, lte, ne, or, SQL } from 'drizzle-orm';
+import { and, eq, gte, lte } from 'drizzle-orm';
 import { UpdateUsuarioDto } from './dto/update-usuario.dto';
 import { getTableColumns } from 'drizzle-orm';
 import { count } from 'drizzle-orm';
-import { Multer } from 'multer';
+import { ValidarUniqueService } from 'src/common/validar_unique.service';
+import { BaseDrizzleService } from 'src/drizzle/base_drizzle.service';
+import { CloudinaryService } from 'src/cloudinary/cloudinary.service';
 
 @Injectable()
-export class UsuarioService {
+export class UsuarioService extends BaseDrizzleService {
 
   constructor(
-    private readonly drizzleService: DrizzleService,
-    @Inject(forwardRef(() => FotoService)) private readonly fotoService: FotoService,
-    private readonly emailService: EmailService
-  ) { }
-
-  private get db() {
-    return this.drizzleService.getDb()
+    drizzleService: DrizzleService,
+    private readonly cloudinaryService: CloudinaryService,
+    private readonly emailService: EmailService,
+    private readonly validarUniqueService: ValidarUniqueService
+  ) {
+    super(drizzleService)
   }
 
   async findUniqueUsuario(id: number, estado: boolean) {
-    try {
-      const { rol_id, ...restoCamposUsuario } = getTableColumns(UsuarioTable)
+    const { rol_id, ...restoCamposUsuario } = getTableColumns(UsuarioTable)
 
-      const [responseUsuarioId] = await this.db
-        .select({
-          ...restoCamposUsuario,
-          rol: {
-            id: RolTable.id,
-            nombre: RolTable.nombre,
-          },
-          empresa: {
-            razon_social: EmpresaTable.razon_social
-          }
-        })
-        .from(UsuarioTable)
-        .innerJoin(RolTable, eq(UsuarioTable.rol_id, RolTable.id))
-        .innerJoin(EmpresaTable, eq(UsuarioTable.empresa_id, EmpresaTable.id))
-        .where(
-          and(
-            eq(UsuarioTable.id, id),
-            eq(UsuarioTable.estado_registro, estado)
-          )
+    const [responseUsuarioId] = await this.db
+      .select({
+        ...restoCamposUsuario,
+        rol: {
+          id: RolTable.id,
+          nombre: RolTable.nombre,
+        },
+        empresa: {
+          razon_social: EmpresaTable.razon_social
+        }
+      })
+      .from(UsuarioTable)
+      .innerJoin(RolTable, eq(UsuarioTable.rol_id, RolTable.id))
+      .innerJoin(EmpresaTable, eq(UsuarioTable.empresa_id, EmpresaTable.id))
+      .where(
+        and(
+          eq(UsuarioTable.id, id),
+          eq(UsuarioTable.estado_registro, estado)
         )
-        .limit(1)
+      )
+      .limit(1)
 
-      if (!responseUsuarioId) {
-        throw new NotFoundException(`No se encontro el usuario con id ${id}`)
-      }
-
-      return {
-        responseUsuarioId,
-        imagen_url: responseUsuarioId.nombre_imagen
-          ? this.fotoService.obtenerUrlCompleta('usuario', responseUsuarioId.id, responseUsuarioId.nombre_imagen)
-          : null
-      };
-
-    } catch (error) {
-      throw new InternalServerErrorException(error)
+    if (!responseUsuarioId) {
+      throw new NotFoundException(`No se encontro el usuario con id ${id}`)
     }
+
+    return {
+      responseUsuarioId,
+      imagen_url: responseUsuarioId.url_imagen ?? 'empresoft.jpg'
+    };
   }
 
   async findOnebyEmail(email: string) {
 
-    try {
+    const { rol_id, ...restoCamposEmail } = getTableColumns(UsuarioTable)
 
-      const { rol_id, ...restoCamposEmail } = getTableColumns(UsuarioTable)
+    const [responseBuscarUsuarioByEmail] = await this.db
+      .select({
+        ...restoCamposEmail,
+        rol: {
+          id: RolTable.id,
+          nombre: RolTable.nombre
+        },
+        empresa: {
+          razon_social: EmpresaTable.razon_social
+        }
+      })
+      .from(UsuarioTable)
+      .innerJoin(RolTable, eq(UsuarioTable.rol_id, RolTable.id))
+      .innerJoin(EmpresaTable, eq(UsuarioTable.empresa_id, EmpresaTable.id))
+      .where(
+        eq(UsuarioTable.email, email)
+      )
+      .limit(1)
 
-      const [responseBuscarUsuarioByEmail] = await this.db
-        .select({
-          ...restoCamposEmail,
-          rol: {
-            id: RolTable.id,
-            nombre: RolTable.nombre
-          },
-          empresa: {
-            razon_social: EmpresaTable.razon_social
-          }
-        })
-        .from(UsuarioTable)
-        .innerJoin(RolTable, eq(UsuarioTable.rol_id, RolTable.id))
-        .innerJoin(EmpresaTable, eq(UsuarioTable.empresa_id, EmpresaTable.id))
-        .where(
-          eq(UsuarioTable.email, email)
-        )
-        .limit(1)
-
-      if (!responseBuscarUsuarioByEmail) {
-        throw new NotFoundException(`El usuario no fue encontrado`)
-      }
-
-      return {
-        responseBuscarUsuarioByEmail,
-        imagen_url: responseBuscarUsuarioByEmail.nombre_imagen
-          ? this.fotoService.obtenerUrlCompleta('usuario', responseBuscarUsuarioByEmail.id, responseBuscarUsuarioByEmail.nombre_imagen)
-          : null
-      };
-
-    } catch (error) {
-      throw new InternalServerErrorException(error)
+    if (!responseBuscarUsuarioByEmail) {
+      throw new NotFoundException(`El usuario no fue encontrado`)
     }
+
+    return {
+      responseBuscarUsuarioByEmail,
+      imagen_url: responseBuscarUsuarioByEmail.url_imagen ?? 'empresoft.jpg'
+    };
 
   }
 
   async getAllUsuario(paginationUsuarioDto: PaginationUsuarioDto, estado: boolean) {
-    try {
-      const { page, limit, fechaInicio, fechaFin, rolId } = paginationUsuarioDto;
 
-      const safeLimit = Math.max(1, limit ?? 10);
-      const safePage = Math.max(1, page ?? 1);
+    const { page, limit, fechaInicio, fechaFin, rolId } = paginationUsuarioDto;
 
-      const conditions = [eq(UsuarioTable.estado_registro, estado)];
+    const safeLimit = Math.max(1, limit ?? 10);
+    const safePage = Math.max(1, page ?? 1);
 
-      // Filtro por fechas
-      if (fechaInicio && fechaFin) {
-        const fechaInicioDate = new Date(fechaInicio);
-        const fechaFinDate = new Date(fechaFin);
+    const conditions = [eq(UsuarioTable.estado_registro, estado)];
 
-        if (!isNaN(fechaInicioDate.getTime()) && !isNaN(fechaFinDate.getTime())) {
-          conditions.push(
-            gte(UsuarioTable.fecha_ingreso, fechaInicioDate.toISOString()),
-            lte(UsuarioTable.fecha_ingreso, fechaFinDate.toISOString())
-          );
-        }
+    // Filtro por fechas
+    if (fechaInicio && fechaFin) {
+      const fechaInicioDate = new Date(fechaInicio);
+      const fechaFinDate = new Date(fechaFin);
+
+      if (!isNaN(fechaInicioDate.getTime()) && !isNaN(fechaFinDate.getTime())) {
+        conditions.push(
+          gte(UsuarioTable.fecha_ingreso, fechaInicioDate.toISOString()),
+          lte(UsuarioTable.fecha_ingreso, fechaFinDate.toISOString())
+        );
       }
-
-      // Filtro por rol
-      if (rolId) {
-        const rolExists = await this.db
-          .select({ id: RolTable.id })
-          .from(RolTable)
-          .where(eq(RolTable.id, rolId))
-          .limit(1);
-
-        if (rolExists.length > 0) {
-          conditions.push(eq(UsuarioTable.rol_id, rolId));
-        }
-      }
-
-      // Combinar todas las condiciones
-      const whereClause = and(...conditions);
-
-      const [{ value }] = await this.db
-        .select({ value: count(UsuarioTable.id) })
-        .from(UsuarioTable)
-        .where(whereClause);
-
-      const totalUsuario = Number(value);
-      const lastPage = Math.ceil(totalUsuario / safeLimit);
-
-      const usuarios = await this.db
-        .select()
-        .from(UsuarioTable)
-        .where(whereClause)
-        .limit(safeLimit)
-        .offset((safePage - 1) * safeLimit);
-
-      return {
-        data: usuarios.map((user) => ({
-          ...user,
-          imagen_url: user.nombre_imagen
-            ? this.fotoService.obtenerUrlCompleta('usuario', user.id, user.nombre_imagen)
-            : null,
-        })),
-        pagination: {
-          totalUsuario,
-          page: safePage,
-          lastPage,
-        },
-      };
-    } catch (error) {
-      throw new InternalServerErrorException(
-        `Error al obtener usuarios: ${error.message}`
-      );
     }
-  }
 
-  private async usuarioExistenteAlCrear(email: string, numero_documento: string, telefono: string) {
+    // Filtro por rol
+    if (rolId) {
+      const rolExists = await this.db
+        .select({ id: RolTable.id })
+        .from(RolTable)
+        .where(eq(RolTable.id, rolId))
+        .limit(1);
 
-    const [usuarioExistente] = await this.db
-      .select({
-        email: UsuarioTable.email,
-        numero_documento: UsuarioTable.numero_documento,
-        telefono: UsuarioTable.telefono
-      })
+      if (rolExists.length > 0) {
+        conditions.push(eq(UsuarioTable.rol_id, rolId));
+      }
+    }
+
+    // Combinar todas las condiciones
+    const whereClause = and(...conditions);
+
+    const [{ value }] = await this.db
+      .select({ value: count(UsuarioTable.id) })
       .from(UsuarioTable)
-      .where(
-        or(
-          eq(UsuarioTable.email, email),
-          eq(UsuarioTable.numero_documento, numero_documento),
-          eq(UsuarioTable.telefono, telefono)
-        )
-      )
+      .where(whereClause);
 
-    if (usuarioExistente) {
-      const errores: Record<string, string>[] = [];
-      if (usuarioExistente.email === email) {
-        errores.push({ errorEmail: "El email ya está registrado." });
-      }
-      if (usuarioExistente.numero_documento === numero_documento) {
-        errores.push({ errorNumeroDocumento: "El número de documento ya está registrado." });
-      }
-      if (usuarioExistente.telefono === telefono) {
-        errores.push({ errorTelefono: "El número de telefono ya está registrado." })
-      }
-      throw new BadRequestException({ message: "Errores de validación", errors: errores });
-    }
+    const totalUsuario = Number(value);
+    const lastPage = Math.ceil(totalUsuario / safeLimit);
 
-  }
-
-  private async usuarioExistenteAlActualizar(id: number, email?: string, numero_documento?: string, telefono?: string) {
-
-    const condiciones: SQL[] = [];
-
-    if (email) {
-      condiciones.push(eq(UsuarioTable.email, email));
-    }
-    if (numero_documento) {
-      condiciones.push(eq(UsuarioTable.numero_documento, numero_documento));
-    }
-    if (telefono) {
-      condiciones.push(eq(UsuarioTable.telefono, telefono));
-    }
-
-    if (condiciones.length === 0) {
-      return;
-    }
-
-    const [usuarioExistente] = await this.db
-      .select({
-        email: UsuarioTable.email,
-        numero_documento: UsuarioTable.numero_documento,
-        telefono: UsuarioTable.telefono
-      })
+    const usuarios = await this.db
+      .select()
       .from(UsuarioTable)
-      .where(
-        and(
-          ne(UsuarioTable.id, id),
-          or(...condiciones)
-        )
-      )
+      .where(whereClause)
+      .limit(safeLimit)
+      .offset((safePage - 1) * safeLimit);
 
-    if (usuarioExistente) {
-      const errores: Record<string, string>[] = [];
-      if (usuarioExistente.email === email) {
-        errores.push({ errorEmail: "El email ya está registrado." });
-      }
-      if (usuarioExistente.numero_documento === numero_documento) {
-        errores.push({ errorNumeroDocumento: "El número de documento ya está registrado." });
-      }
-      if (usuarioExistente.telefono === telefono) {
-        errores.push({ errorTelefono: "El número de telefono ya está registrado." })
-      }
-      throw new BadRequestException({ message: "Errores de validación", errors: errores });
-    }
-
+    return {
+      data: usuarios.map((user) => ({
+        ...user,
+        imagen_url: user.url_imagen ?? 'empresoft.jpg'
+      })),
+      pagination: {
+        totalUsuario,
+        page: safePage,
+        lastPage,
+      },
+    };
   }
 
   async createUsuario(createUsuarioDto: CreateUsuarioDto, fotoUsuario: Express.Multer.File, empresaId: number) {
@@ -282,9 +180,19 @@ export class UsuarioService {
 
       const nombreCompleto = `${createUsuarioDto.nombre} ${createUsuarioDto.apellido}`
 
-      await this.usuarioExistenteAlCrear(createUsuarioDto.email, createUsuarioDto.numero_documento, createUsuarioDto.telefono)
+      await this.validarUniqueService.validarDatosUnicos({
+        dto: createUsuarioDto,
+        table: UsuarioTable,
+        idColumn: UsuarioTable.id,
+        uniqueFields: [
+          { field: "numero_documento", column: UsuarioTable.numero_documento },
+          { field: "email", column: UsuarioTable.email }
+        ]
+      })
 
-      const responseCreateUsuario = await this.db
+      const imagen_url = await this.cloudinaryService.uploadFile(fotoUsuario)
+
+      await this.db
         .insert(UsuarioTable)
         .values({
           // Datos básicos
@@ -295,6 +203,8 @@ export class UsuarioService {
           apellido: createUsuarioDto.apellido,
           tipo_documento: createUsuarioDto.tipo_documento,
           numero_documento: createUsuarioDto.numero_documento,
+          tipo_imagen: fotoUsuario.mimetype as "png" | "jpg",
+          url_imagen: imagen_url.secure_url,
           // Fechas convertidas a string
           fecha_nacimiento: createUsuarioDto.fecha_nacimiento.toISOString().split('T')[0],
           fecha_ingreso: createUsuarioDto.fecha_ingreso.toISOString().split('T')[0],
@@ -312,11 +222,7 @@ export class UsuarioService {
           token_verificacion_email: verificationToken,
           token_expiry_email: new Date(Date.now() + 86400000),
         })
-        .returning();
-      const createUsuario = responseCreateUsuario[0];
-      const imagen_url = await this.fotoService.guardarImagen(createUsuario.id, 'usuario', fotoUsuario)
-      //Registar foto de perfil
-      await this.updateNombrefotoUsuario(createUsuario.id, { foto_url: imagen_url })
+
       // Enviar correo de verificación
       const verificationLink = `${envs.baseFrontendUrl}/${envs.verifyEmailPath}${verificationToken}`;
       // Usar el servicio de correo
@@ -332,44 +238,32 @@ export class UsuarioService {
       }
 
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(`Tenemos problemas para crear el usuario: ${error}`);
     }
 
   }
 
-  async updateNombrefotoUsuario(id: number, fotoDto: FotoDto) {
-    try {
-
-      const [foto] = await this.db
-        .update(UsuarioTable)
-        .set({
-          nombre_imagen: fotoDto.foto_url,
-          updated_at: new Date()
-        })
-        .where(
-          eq(UsuarioTable.id, id)
-        )
-        .returning()
-
-      return foto
-    } catch (error) {
-      throw new InternalServerErrorException(error)
-    }
-  }
-
-  async updateUsuario(id: number, updateUsuarioDto: UpdateUsuarioDto, empresaId: number, fotoUsuario?: Express.Multer.File) {
+  async updateUsuario(id: number, updateUsuarioDto: UpdateUsuarioDto, empresaId: number, fotoUsuario: Express.Multer.File) {
 
     try {
 
-      const { email, numero_documento, telefono } = updateUsuarioDto
+      await this.findUniqueUsuario(id, true)
 
-      const usuario = await this.findUniqueUsuario(id, true)
+      await this.validarUniqueService.validarDatosUnicos({
+        dto: updateUsuarioDto,
+        table: UsuarioTable,
+        idColumn: UsuarioTable.id,
+        uniqueFields: [
+          { field: "numero_documento", column: UsuarioTable.numero_documento },
+          { field: "email", column: UsuarioTable.email }
+        ],
+        id: id
+      })
 
-      await this.usuarioExistenteAlActualizar(id, email, numero_documento, telefono)
+      const responseFile = await this.cloudinaryService.uploadFile(fotoUsuario)
 
-      const pathUrl = await this.fotoService.actualizarImagen(usuario.responseUsuarioId.id, 'usuario', usuario.responseUsuarioId.nombre_imagen, fotoUsuario)
-
-      const [updateUsuario] = await this.db
+      await this.db
         .update(UsuarioTable)
         .set({
           // Datos básicos (solo los que vienen en updateUsuarioDto)
@@ -397,15 +291,15 @@ export class UsuarioService {
           empresa_id: empresaId,
           rol_id: updateUsuarioDto.rol_id,
           // Imagen
-          nombre_imagen: pathUrl,
-          updated_at: new Date()
+          tipo_imagen: fotoUsuario.mimetype as "png" | "jpg",
+          url_imagen: responseFile.secure_url,
         })
         .where(eq(UsuarioTable.id, id))
-        .returning();
 
-      return updateUsuario
+      return { message: "Usuario actualizado correctamente" }
 
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(error)
     }
 
@@ -423,8 +317,7 @@ export class UsuarioService {
       const [updatePassword] = await this.db
         .update(UsuarioTable)
         .set({
-          password: hashedPassword,
-          updated_at: new Date()
+          password: hashedPassword
         })
         .where(
           eq(UsuarioTable.id, usuarioId)
@@ -434,6 +327,7 @@ export class UsuarioService {
       return updatePassword
 
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(error)
     }
 
@@ -447,8 +341,7 @@ export class UsuarioService {
       await this.db
         .update(UsuarioTable)
         .set({
-          estado_registro: true,
-          updated_at: new Date()
+          estado_registro: true
         })
         .where(
           eq(UsuarioTable.id, id)
@@ -459,6 +352,7 @@ export class UsuarioService {
       }
 
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(error)
     }
   }
@@ -471,8 +365,7 @@ export class UsuarioService {
       await this.db
         .update(UsuarioTable)
         .set({
-          estado_registro: false,
-          updated_at: new Date()
+          estado_registro: false
         })
         .where(
           eq(UsuarioTable.id, id)
@@ -483,6 +376,7 @@ export class UsuarioService {
       }
 
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(error)
     }
   }

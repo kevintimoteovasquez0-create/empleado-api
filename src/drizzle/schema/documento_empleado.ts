@@ -11,11 +11,11 @@ import { EmpleadoTable } from './empleado';
 import { RequisitoDocumentoTable } from './requisito_documento';
 import { UsuarioTable } from './usuario';
 
-// Enums
 export const TipoArchivoEnum = pgEnum('tipo_archivo', ['pdf', 'img']);
 export const EstadoDocumentoEnum = pgEnum('estado_documento', [
   'PENDIENTE',
-  'COMPLETO',
+  'APROBADO',
+  'RECHAZADO',
   'OBSERVADO',
 ]);
 
@@ -27,13 +27,13 @@ export const DocumentoEmpleadoTable = pgTable('documento_empleado', {
   requisito_id: integer('requisito_id')
     .references(() => RequisitoDocumentoTable.id)
     .notNull(),
-  archivo_pdf: text('archivo_pdf').notNull(),
+  archivo_pdf: text('archivo_pdf'),
   tipo_archivo: TipoArchivoEnum().notNull(),
   estado: EstadoDocumentoEnum().default('PENDIENTE').notNull(),
   observacion_texto: text('observacion_texto'),
-  fecha_subida: timestamp('fecha_subida').defaultNow().notNull(),
+  fecha_subida: timestamp('fecha_subida').defaultNow().$onUpdate(()=> new Date).notNull(),
   revisado_por: integer('revisado_por').references(() => UsuarioTable.id),
-  fecha_revision: timestamp('fecha_revision'),
+  fecha_revision: timestamp('fecha_revision').$onUpdate(()=> new Date),
   estado_registro: boolean('estado_registro').default(true).notNull(),
   createdAt: timestamp('createdAt').defaultNow().notNull(),
   updatedAt: timestamp('updatedAt')

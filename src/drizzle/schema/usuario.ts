@@ -3,9 +3,14 @@ import { EmpresaTable } from "./empresa";
 import { RolTable } from "./rol";
 import { AreaTable } from "./area";
 
-export const TipoDocumentoUsuario = pgEnum('tipo_documento_usuario', [
+export const TipoDocumentoUsuarioEnum = pgEnum('tipo_documento_usuario', [
   "DNI",
   "CE"
+]);
+
+export const TipoImagenEnum = pgEnum('tipo_imagen', [
+  "png",
+  "jpg"
 ]);
 
 export const UsuarioTable = pgTable('usuario', {
@@ -19,7 +24,7 @@ export const UsuarioTable = pgTable('usuario', {
   area_id: integer('area_id').references(() => AreaTable.id).notNull(),
   nombre: varchar('nombre', { length: 50 }).notNull(),
   apellido: varchar('apellido', { length: 50 }).notNull(),
-  tipo_documento: varchar('tipo_documento', { length: 20 }).notNull(),
+  tipo_documento: TipoDocumentoUsuarioEnum().notNull(),
   numero_documento: varchar('numero_documento', { length: 20 }).notNull().unique(),
   fecha_nacimiento: date('fecha_nacimiento'),
   fecha_ingreso: date('fecha_ingreso'),
@@ -31,7 +36,8 @@ export const UsuarioTable = pgTable('usuario', {
   telefono: varchar('telefono', { length: 9 }),
   email: varchar('email', { length: 100 }).notNull().unique(),
   password: varchar('password', { length: 60 }).notNull(),
-  nombre_imagen: varchar('nombre_imagen'),
+  tipo_imagen: TipoImagenEnum().notNull(),
+  url_imagen: varchar('url_imagen'),
   verificado_email: boolean('verificado_email').default(false).notNull(),
   remember_token: varchar('remember_token'),
   token_verificacion_email: varchar('token_verificacion_email', { length: 255 }),

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { CreateRolDto } from './dto/create-rol.dto';
 import { UpdateRolDto } from './dto/update-rol.dto';
 import { PaginationDto } from 'src/common';
@@ -9,18 +9,18 @@ import { AccesoTable } from 'src/drizzle/schema/acceso';
 import { Rol_Acceso_Table } from 'src/drizzle/schema/rol_acceso';
 import { getTableColumns } from 'drizzle-orm';
 import { countDistinct } from 'drizzle-orm';
+import { BaseDrizzleService } from 'src/drizzle/base_drizzle.service';
 
 @Injectable()
-export class RolService {
+export class RolService extends BaseDrizzleService {
 
-  constructor (private readonly drizzleService: DrizzleService) {}
-
-  private get db(){
-    return this.drizzleService.getDb()
+  constructor(drizzleService: DrizzleService) {
+    super(drizzleService)
   }
 
+
   //  Visualizar todos los roles de una empresa.
-  
+
   async findAllRol(paginationDto: PaginationDto, estado: boolean) {
     try {
       const { page = 1, limit = 10 } = paginationDto;
@@ -54,7 +54,7 @@ export class RolService {
       }
 
       const rolesIds = rolesPaginados.map(r => r.id);
-      
+
       const rolesConAccesos = await this.db
         .select({
           ...getTableColumns(RolTable),
@@ -201,7 +201,7 @@ export class RolService {
       throw new InternalServerErrorException(`Ocurrio un error con el sistema: ${error}`);
     }
   }
-  
+
   //Actualizar rol
   async updateRol(id: number, updateDto: UpdateRolDto) {
 
@@ -249,7 +249,7 @@ export class RolService {
       // transacción
       await this.db.transaction(async (operacion) => {
 
-        if(nombre){
+        if (nombre) {
           await operacion
             .update(RolTable)
             .set({
@@ -293,7 +293,7 @@ export class RolService {
             await operacion
               .delete(Rol_Acceso_Table)
               .where(
-                and (
+                and(
                   eq(Rol_Acceso_Table.rol_id, id),
                   inArray(Rol_Acceso_Table.acceso_id, accesosAEliminar)
                 )
@@ -316,10 +316,7 @@ export class RolService {
 
       return { message: "Rol actualizado correctamente." };
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException
-      ) {
-        throw error;
-      }
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         `Ocurrió un error al actualizar el rol: ${error.message}`
       );
@@ -334,15 +331,15 @@ export class RolService {
       await this.db
         .update(RolTable)
         .set({
-          estado_registro: true,
-          updated_at: new Date()
+          estado_registro: true
         })
         .where(
           eq(RolTable.id, id)
         )
 
-      return { message: 'Rol restaurado exitosamente. '};
+      return { message: 'Rol restaurado exitosamente. ' };
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(`Ocurrio un error con el sistema: ${error}`);
     }
   }
@@ -355,15 +352,15 @@ export class RolService {
       await this.db
         .update(RolTable)
         .set({
-          estado_registro: false,
-          updated_at: new Date()
+          estado_registro: false
         })
         .where(
           eq(RolTable.id, id)
         )
 
-      return { message: 'Rol eliminado exitosamente. '};
+      return { message: 'Rol eliminado exitosamente. ' };
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(`Ocurrio un error con el sistema: ${error}`);
     }
   }

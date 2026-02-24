@@ -12,17 +12,16 @@ import { EmpleadoTable } from 'src/drizzle/schema/empleado';
 import { CreateContratoDto } from './dto/create-contrato.dto';
 import { UpdateContratoDto } from './dto/update-contrato.dto';
 import { ContratoTable } from 'src/drizzle/schema/contrato';
+import { BaseDrizzleService } from 'src/drizzle/base_drizzle.service';
 
 @Injectable()
-export class ContratoService {
-  constructor(private readonly drizzleService: DrizzleService) { }
-
-  private get db() {
-    return this.drizzleService.getDb();
-  }
+export class ContratoService extends BaseDrizzleService{
+  constructor(drizzleService: DrizzleService) {
+    super(drizzleService)
+   }
 
   async findAllContratos(paginationDto: PaginationDto, estado: boolean) {
-    try {
+
       const { page, limit } = paginationDto;
 
       const [{ total }] = await this.db
@@ -63,15 +62,10 @@ export class ContratoService {
           finalPage: numberPages,
         },
       };
-    } catch (error) {
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
-      );
-    }
   }
 
   async findContratoById(id: number, estado: boolean) {
-    try {
+
       const { empleado_id, ...restoCamposContrato } = getTableColumns(ContratoTable);
 
       const [response] = await this.db
@@ -93,11 +87,6 @@ export class ContratoService {
       }
 
       return response;
-    } catch (error) {
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
-      );
-    }
   }
 
   async createContrato(createContratoDto: CreateContratoDto) {

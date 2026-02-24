@@ -3,17 +3,18 @@ CREATE TYPE "public"."modalidad_contrato" AS ENUM('CONVENIO_PRACTICAS', 'PLAZO_F
 CREATE TYPE "public"."moneda" AS ENUM('PEN', 'USD');--> statement-breakpoint
 CREATE TYPE "public"."modalidad" AS ENUM('REMOTO', 'PRESENCIAL', 'SEMIPRESENCIAL');--> statement-breakpoint
 CREATE TYPE "public"."tipoEmpleado" AS ENUM('PROF', 'PRAT');--> statement-breakpoint
-CREATE TYPE "public"."estado_documento" AS ENUM('PENDIENTE', 'COMPLETO', 'OBSERVADO');--> statement-breakpoint
+CREATE TYPE "public"."estado_documento" AS ENUM('PENDIENTE', 'APROBADO', 'RECHAZADO', 'OBSERVADO');--> statement-breakpoint
 CREATE TYPE "public"."tipo_archivo" AS ENUM('pdf', 'img');--> statement-breakpoint
 CREATE TYPE "public"."tipo_documento" AS ENUM('dni', 'carnet_extranjeria');--> statement-breakpoint
 CREATE TYPE "public"."estado_legajo" AS ENUM('al_dia', 'pendiente', 'observado');--> statement-breakpoint
-CREATE TYPE "public"."tipo_personal" AS ENUM('planilla', 'practicante');--> statement-breakpoint
+CREATE TYPE "public"."tipo_personal" AS ENUM('PLANILLA', 'PRACTICANTE');--> statement-breakpoint
 CREATE TYPE "public"."estado_convocatoria" AS ENUM('PENDIENTE', 'ENREVISION', 'PRESELECCIONADO', 'RECHAZADO', 'ACEPTADO');--> statement-breakpoint
 CREATE TYPE "public"."estado_licencia" AS ENUM('pendiente', 'aprobado', 'rechazado');--> statement-breakpoint
 CREATE TYPE "public"."tipo_licencia" AS ENUM('descanso_medico', 'licencia_maternidad', 'licencia_paternidad');--> statement-breakpoint
 CREATE TYPE "public"."estado_postulacion" AS ENUM('PENDIENTE', 'REVISADO', 'PRESELECCIONADO', 'NO_APTO', 'APROBADO');--> statement-breakpoint
 CREATE TYPE "public"."aplica_para" AS ENUM('PLANILLA', 'PRACTICANTE', 'AMBOS');--> statement-breakpoint
 CREATE TYPE "public"."tipo_documento_usuario" AS ENUM('DNI', 'CE');--> statement-breakpoint
+CREATE TYPE "public"."tipo_imagen" AS ENUM('png', 'jpg');--> statement-breakpoint
 CREATE TABLE "acceso" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "acceso_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
 	"nombre" varchar(40) NOT NULL,
@@ -70,7 +71,7 @@ CREATE TABLE "documento_empleado" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "documento_empleado_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
 	"empleado_id" integer NOT NULL,
 	"requisito_id" integer NOT NULL,
-	"archivo_pdf" text NOT NULL,
+	"archivo_pdf" text,
 	"tipo_archivo" "tipo_archivo" NOT NULL,
 	"estado" "estado_documento" DEFAULT 'PENDIENTE' NOT NULL,
 	"observacion_texto" text,
@@ -204,7 +205,7 @@ CREATE TABLE "usuario" (
 	"area_id" integer NOT NULL,
 	"nombre" varchar(50) NOT NULL,
 	"apellido" varchar(50) NOT NULL,
-	"tipo_documento" varchar(20) NOT NULL,
+	"tipo_documento" "tipo_documento_usuario" NOT NULL,
 	"numero_documento" varchar(20) NOT NULL,
 	"fecha_nacimiento" date,
 	"fecha_ingreso" date,
@@ -216,7 +217,8 @@ CREATE TABLE "usuario" (
 	"telefono" varchar(9),
 	"email" varchar(100) NOT NULL,
 	"password" varchar(60) NOT NULL,
-	"nombre_imagen" varchar,
+	"tipo_imagen" "tipo_imagen" NOT NULL,
+	"url_imagen" varchar,
 	"verificado_email" boolean DEFAULT false NOT NULL,
 	"remember_token" varchar,
 	"token_verificacion_email" varchar(255),

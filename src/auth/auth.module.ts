@@ -6,12 +6,14 @@ import { JwtModule } from '@nestjs/jwt';
 import { jwtConstants } from './constants/jwt.constant';
 import { EmailModule } from 'src/email/email.module';
 import { DrizzleModule } from 'src/drizzle/drizzle.module';
+import { EmpleadoModule } from 'src/empleado/empleado.module';
 
 @Module({
   imports: [
     UsuarioModule,
     DrizzleModule,
     EmailModule,
+    EmpleadoModule,
     JwtModule.register({
       global: true,
       secret: jwtConstants.secret,

@@ -1,6 +1,6 @@
 import { pgTable, integer, varchar, pgEnum, timestamp } from "drizzle-orm/pg-core";
 import { ConvocatoriaTable } from "./convocatoria";
-import { TipoDocumentoUsuario } from "./usuario";
+import { TipoDocumentoUsuarioEnum } from "./usuario";
 
 export const EstadoConvocatoria = pgEnum('estado_convocatoria', [
     'PENDIENTE',
@@ -13,7 +13,7 @@ export const EstadoConvocatoria = pgEnum('estado_convocatoria', [
 export const HistorialConvocatoria = pgTable('historial_convocatoria', {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     convocatoria_id: integer('convocatoria_id').references(() => ConvocatoriaTable.id).notNull(),
-    tipo_documento: TipoDocumentoUsuario('tipo_documento').notNull(),
+    tipo_documento: TipoDocumentoUsuarioEnum('tipo_documento').notNull(),
     numero_documento: varchar('numero_documento', { length: 20 }).notNull().unique(),
     telefono: varchar('telefono', { length: 9 }).notNull(),
     nombre: varchar('nombre', { length: 50 }).notNull(),

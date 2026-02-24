@@ -4,7 +4,7 @@ import { AreaTable } from "./area";
 import { sql } from "drizzle-orm";
 
 export const DocumentoEnum = pgEnum("tipo_documento", ["dni", "carnet_extranjeria"])
-export const TipoPersonalEnum = pgEnum("tipo_personal", ["planilla", "practicante"])
+export const TipoPersonalEnum = pgEnum("tipo_personal", ["PLANILLA", "PRACTICANTE"])
 export const EstadoLegajoEnum = pgEnum("estado_legajo", ["al_dia", "pendiente", "observado"])
 
 export const EmpleadoTable = pgTable("empleado",{

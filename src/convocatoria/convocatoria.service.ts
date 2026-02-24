@@ -1,4 +1,4 @@
-import { BadRequestException, HttpException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { DrizzleService } from 'src/drizzle/drizzle.service';
 import { PaginationConvocatoriaDto } from './dto/pagination-convocatoria.dto';
 import { ConvocatoriaTable } from 'src/drizzle/schema/convocatoria';
@@ -10,21 +10,20 @@ import { AreaTable } from 'src/drizzle/schema/area';
 import { CreatePostulacionDto } from 'src/postulacion/dto/create-postulacion.dto';
 import { PostulacionService } from 'src/postulacion/postulacion.service';
 import { PaginationDto } from 'src/common';
+import { getTableColumns } from 'drizzle-orm';
+import { BaseDrizzleService } from 'src/drizzle/base_drizzle.service';
 
 @Injectable()
-export class ConvocatoriaService {
+export class ConvocatoriaService extends BaseDrizzleService{
 
   constructor(
-    private readonly drizzleService: DrizzleService,
+    drizzleService: DrizzleService,
     private readonly postulacionService: PostulacionService
-  ) { }
-
-  private get db() {
-    return this.drizzleService.getDb()
+  ) { 
+    super(drizzleService)
   }
 
   async findAllConvocatorias(paginationConvocatoriaDto: PaginationConvocatoriaDto, estado: boolean) {
-    try {
 
       const { page, limit, tipo_empleado } = paginationConvocatoriaDto;
 
@@ -47,12 +46,14 @@ export class ConvocatoriaService {
       const totalConvocatoria = Number(value);
       const lastPage = Math.ceil(totalConvocatoria / safeLimit);
 
-      const usuarioCreador = alias(UsuarioTable, 'usuario_creador') as any;
-      const usuarioResponsable = alias(UsuarioTable, 'usuario_responsable') as any;
+      const usuarioCreador = alias(UsuarioTable, 'usuario_creador') as typeof UsuarioTable
+      const usuarioResponsable = alias(UsuarioTable, 'usuario_responsable') as typeof UsuarioTable
+
+      const { usuario_id, area_id, ...restoCamposConvocatoria } = getTableColumns(ConvocatoriaTable)
 
       const response = await this.db
         .select({
-          id: ConvocatoriaTable.id,
+          ...restoCamposConvocatoria,
           usuario_creador: {
             id: usuarioCreador.id,
             nombre: usuarioCreador.nombre,
@@ -68,16 +69,6 @@ export class ConvocatoriaService {
             nombre: AreaTable.nombre,
             descripcion: AreaTable.descripcion
           },
-          cargo: ConvocatoriaTable.cargo,
-          tipo_empleado: ConvocatoriaTable.tipo_empleado,
-          modalidad: ConvocatoriaTable.modalidad,
-          descripcion: ConvocatoriaTable.descripcion,
-          remuneracion: ConvocatoriaTable.remuneracion,
-          es_a_convenir: ConvocatoriaTable.es_a_convenir,
-          fecha_finalizacion: ConvocatoriaTable.fecha_finalizacion,
-          estado_registro: ConvocatoriaTable.estado_registro,
-          created_at: ConvocatoriaTable.created_at,
-          updated_at: ConvocatoriaTable.updated_at
         })
         .from(ConvocatoriaTable)
         .leftJoin(usuarioCreador, eq(ConvocatoriaTable.usuario_id, usuarioCreador.id))
@@ -96,68 +87,51 @@ export class ConvocatoriaService {
           lastPage: lastPage
         },
       };
-
-    } catch (error) {
-      throw new InternalServerErrorException(error);
-    }
   }
 
   async findOneConvocatoriaById(id: number, estado: boolean) {
-    try {
 
-      const usuarioCreador = alias(UsuarioTable, 'usuario_creador') as any;
-      const usuarioResponsable = alias(UsuarioTable, 'usuario_responsable') as any;
+    const usuarioCreador = alias(UsuarioTable, 'usuario_creador') as typeof UsuarioTable
+    const usuarioResponsable = alias(UsuarioTable, 'usuario_responsable') as typeof UsuarioTable
 
-      const [response] = await this.db
-        .select({
-          id: ConvocatoriaTable.id,
-          usuario_creador: {
-            id: usuarioCreador.id,
-            nombre: usuarioCreador.nombre,
-            apellido: usuarioCreador.apellido
-          },
-          usuario_responsable: {
-            id: usuarioResponsable.id,
-            nombre: usuarioResponsable.nombre,
-            apellido: usuarioResponsable.apellido
-          },
-          area: {
-            id: AreaTable.id,
-            nombre: AreaTable.nombre,
-            descripcion: AreaTable.descripcion
-          },
-          cargo: ConvocatoriaTable.cargo,
-          tipo_empleado: ConvocatoriaTable.tipo_empleado,
-          modalidad: ConvocatoriaTable.modalidad,
-          descripcion: ConvocatoriaTable.descripcion,
-          remuneracion: ConvocatoriaTable.remuneracion,
-          es_a_convenir: ConvocatoriaTable.es_a_convenir,
-          fecha_finalizacion: ConvocatoriaTable.fecha_finalizacion,
-          estado_registro: ConvocatoriaTable.estado_registro,
-          created_at: ConvocatoriaTable.created_at,
-          updated_at: ConvocatoriaTable.updated_at
-        })
-        .from(ConvocatoriaTable)
-        .leftJoin(usuarioCreador, eq(ConvocatoriaTable.usuario_id, usuarioCreador.id))
-        .leftJoin(usuarioResponsable, eq(ConvocatoriaTable.responsable_id, usuarioResponsable.id))
-        .leftJoin(AreaTable, eq(ConvocatoriaTable.area_id, AreaTable.id))
-        .where(
-          and(
-            eq(ConvocatoriaTable.id, id),
-            eq(ConvocatoriaTable.estado_registro, estado)
-          )
+    const { usuario_id, area_id, ...restoCamposConvocatoria } = getTableColumns(ConvocatoriaTable)
+
+    const [response] = await this.db
+      .select({
+        ...restoCamposConvocatoria,
+        usuario_creador: {
+          id: usuarioCreador.id,
+          nombre: usuarioCreador.nombre,
+          apellido: usuarioCreador.apellido
+        },
+        usuario_responsable: {
+          id: usuarioResponsable.id,
+          nombre: usuarioResponsable.nombre,
+          apellido: usuarioResponsable.apellido
+        },
+        area: {
+          id: AreaTable.id,
+          nombre: AreaTable.nombre,
+          descripcion: AreaTable.descripcion
+        }
+      })
+      .from(ConvocatoriaTable)
+      .leftJoin(usuarioCreador, eq(ConvocatoriaTable.usuario_id, usuarioCreador.id))
+      .leftJoin(usuarioResponsable, eq(ConvocatoriaTable.responsable_id, usuarioResponsable.id))
+      .leftJoin(AreaTable, eq(ConvocatoriaTable.area_id, AreaTable.id))
+      .where(
+        and(
+          eq(ConvocatoriaTable.id, id),
+          eq(ConvocatoriaTable.estado_registro, estado)
         )
-        .limit(1);
+      )
+      .limit(1);
 
-      if (!response) {
-        throw new NotFoundException(`No se encontro la convocatoria con id ${id}`)
-      }
-
-      return response
-
-    } catch (error) {
-      throw new InternalServerErrorException(error)
+    if (!response) {
+      throw new NotFoundException(`No se encontro la convocatoria con id ${id}`)
     }
+
+    return response
   }
 
   async createConvocatoria(createConvocatoriaDto: CreateConvocatoriaDto) {
@@ -292,25 +266,13 @@ export class ConvocatoriaService {
   //Funciones extras
 
   async convocatoriaPostular(id: number, createPostulacionDto: CreatePostulacionDto) {
-    try {
-      await this.findOneConvocatoriaById(id, true)
-      return this.postulacionService.createPostulacion(id, createPostulacionDto)
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException(error)
-    }
+    await this.findOneConvocatoriaById(id, true)
+    return this.postulacionService.createPostulacion(id, createPostulacionDto)
   }
 
   async obtenerPostulacionesConvocatorias(id: number, estado: boolean, paginationDto: PaginationDto) {
-    try {
-      await this.findOneConvocatoriaById(id, true)
-      return this.postulacionService.findAllPostulaciones(paginationDto, estado, id)
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
-      );
-    }
+    await this.findOneConvocatoriaById(id, true)
+    return this.postulacionService.findAllPostulaciones(paginationDto, estado, id)
   }
 
 }

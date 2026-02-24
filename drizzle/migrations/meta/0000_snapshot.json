@@ -1,5 +1,5 @@
 {
-  "id": "f40f1584-fa55-4e94-9c1c-ed226eea045d",
+  "id": "d0cf8b66-f239-4ebc-8af0-713dd863affe",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -463,7 +463,7 @@
           "name": "archivo_pdf",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "tipo_archivo": {
           "name": "tipo_archivo",
@@ -1501,7 +1501,8 @@
         },
         "tipo_documento": {
           "name": "tipo_documento",
-          "type": "varchar(20)",
+          "type": "tipo_documento_usuario",
+          "typeSchema": "public",
           "primaryKey": false,
           "notNull": true
         },
@@ -1571,8 +1572,15 @@
           "primaryKey": false,
           "notNull": true
         },
-        "nombre_imagen": {
-          "name": "nombre_imagen",
+        "tipo_imagen": {
+          "name": "tipo_imagen",
+          "type": "tipo_imagen",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url_imagen": {
+          "name": "url_imagen",
           "type": "varchar",
           "primaryKey": false,
           "notNull": false
@@ -1769,7 +1777,8 @@
       "schema": "public",
       "values": [
         "PENDIENTE",
-        "COMPLETO",
+        "APROBADO",
+        "RECHAZADO",
         "OBSERVADO"
       ]
     },
@@ -1802,8 +1811,8 @@
       "name": "tipo_personal",
       "schema": "public",
       "values": [
-        "planilla",
-        "practicante"
+        "PLANILLA",
+        "PRACTICANTE"
       ]
     },
     "public.estado_convocatoria": {
@@ -1861,6 +1870,14 @@
       "values": [
         "DNI",
         "CE"
+      ]
+    },
+    "public.tipo_imagen": {
+      "name": "tipo_imagen",
+      "schema": "public",
+      "values": [
+        "png",
+        "jpg"
       ]
     }
   },

@@ -1,4 +1,4 @@
-import { TipoDocumentoUsuario } from "src/drizzle/schema/usuario"
+import { TipoDocumentoUsuarioEnum } from "src/drizzle/schema/usuario"
 
-export const TipoDocumentoUsuarioList = TipoDocumentoUsuario.enumValues;
-export type TipoDocumentoUsuarioType = (typeof TipoDocumentoUsuario.enumValues)[number];
+export const TipoDocumentoUsuarioList = TipoDocumentoUsuarioEnum.enumValues;
+export type TipoDocumentoUsuarioType = (typeof TipoDocumentoUsuarioEnum.enumValues)[number];

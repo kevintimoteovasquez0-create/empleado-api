@@ -9,106 +9,89 @@ import { EmpleadoService } from 'src/empleado/empleado.service';
 import { CreateAreaDto } from './dto/create-area.dto';
 import { UpdateAreaDto } from './dto/update-area.dto';
 import { PostulacionService } from 'src/postulacion/postulacion.service';
+import { BaseDrizzleService } from 'src/drizzle/base_drizzle.service';
 
 @Injectable()
-export class AreaService {
+export class AreaService extends BaseDrizzleService {
 
   constructor(
-    private readonly drizzleService: DrizzleService,
+    drizzleService: DrizzleService,
     private readonly empleadoService: EmpleadoService,
     private readonly postulacionService: PostulacionService
-  ) { }
-
-  private get db() {
-    return this.drizzleService.getDb();
+  ) { 
+    super(drizzleService)
   }
 
   async findAllAreas(paginationDto: PaginationDto, estado: boolean) {
-    try {
 
-      const { page, limit } = paginationDto
+    const { page, limit } = paginationDto
 
-      const [{ total }] = await this.db
-        .select({ total: count() })
-        .from(AreaTable)
-        .where(eq(AreaTable.estado_registro, estado))
+    const [{ total }] = await this.db
+      .select({ total: count() })
+      .from(AreaTable)
+      .where(eq(AreaTable.estado_registro, estado))
 
-      const getAllRegistrosArea = Number(total)
+    const getAllRegistrosArea = Number(total)
 
-      const finalPage = page ?? 1
-      const finalLimit = limit ?? 10
+    const finalPage = page ?? 1
+    const finalLimit = limit ?? 10
 
-      const numberPages = Math.ceil(getAllRegistrosArea / finalLimit)
+    const numberPages = Math.ceil(getAllRegistrosArea / finalLimit)
 
-      const { responsable_id, ...restoCamposArea } = getTableColumns(AreaTable)
+    const { responsable_id, ...restoCamposArea } = getTableColumns(AreaTable)
 
-      const responseAreas = await this.db
-        .select({
-          ...restoCamposArea,
-          responsable: {
-            id: UsuarioTable.id,
-            nombre: UsuarioTable.nombre
-          }
-        })
-        .from(AreaTable)
-        .innerJoin(UsuarioTable, eq(AreaTable.responsable_id, UsuarioTable.id))
-        .where(eq(AreaTable.estado_registro, estado))
-        .limit(finalLimit)
-        .offset((finalPage - 1) * finalLimit)
-
-      return {
-        data: responseAreas,
-        pagination: {
-          tota: getAllRegistrosArea,
-          page: finalPage,
-          limit: finalLimit,
-          finalPage: numberPages
+    const responseAreas = await this.db
+      .select({
+        ...restoCamposArea,
+        responsable: {
+          id: UsuarioTable.id,
+          nombre: UsuarioTable.nombre
         }
-      }
+      })
+      .from(AreaTable)
+      .innerJoin(UsuarioTable, eq(AreaTable.responsable_id, UsuarioTable.id))
+      .where(eq(AreaTable.estado_registro, estado))
+      .limit(finalLimit)
+      .offset((finalPage - 1) * finalLimit)
 
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
-      );
+    return {
+      data: responseAreas,
+      pagination: {
+        tota: getAllRegistrosArea,
+        page: finalPage,
+        limit: finalLimit,
+        finalPage: numberPages
+      }
     }
   }
 
   async findAreasById(id: number, estado: boolean) {
-    try {
 
-      const { responsable_id, ...restoCamposArea } = getTableColumns(AreaTable)
+    const { responsable_id, ...restoCamposArea } = getTableColumns(AreaTable)
 
-      const [response] = await this.db
-        .select({
-          ...restoCamposArea,
-          responsable: {
-            id: UsuarioTable.id,
-            nombre: UsuarioTable.nombre
-          }
-        })
-        .from(AreaTable)
-        .innerJoin(UsuarioTable, eq(AreaTable.responsable_id, UsuarioTable.id))
-        .where(
-          and(
-            eq(AreaTable.id, id),
-            eq(AreaTable.estado_registro, estado)
-          )
+    const [response] = await this.db
+      .select({
+        ...restoCamposArea,
+        responsable: {
+          id: UsuarioTable.id,
+          nombre: UsuarioTable.nombre
+        }
+      })
+      .from(AreaTable)
+      .innerJoin(UsuarioTable, eq(AreaTable.responsable_id, UsuarioTable.id))
+      .where(
+        and(
+          eq(AreaTable.id, id),
+          eq(AreaTable.estado_registro, estado)
         )
-        .limit(1)
+      )
+      .limit(1)
 
-      if (!response) {
-        throw new NotFoundException(`No se encontro la área con id ${id}`)
-      }
-
-      return response
-
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
-      );
+    if (!response) {
+      throw new NotFoundException(`No se encontro la área con id ${id}`)
     }
+
+    return response
   }
 
   async createAreas(createAreaDto: CreateAreaDto) {
@@ -153,9 +136,7 @@ export class AreaService {
 
   async restoreAreas(id: number) {
     try {
-
       await this.findAreasById(id, false)
-
       await this.db
         .update(AreaTable)
         .set({ estado_registro: true })
@@ -175,9 +156,7 @@ export class AreaService {
 
   async removeAreas(id: number) {
     try {
-
       await this.findAreasById(id, true)
-
       await this.db
         .update(AreaTable)
         .set({ estado_registro: false })
@@ -198,27 +177,13 @@ export class AreaService {
   //Funciones extras
 
   async obtenerEmpleadosAreas(id: number, estado: boolean, paginationDto: PaginationDto) {
-    try {
-      await this.findAreasById(id, true)
-      return this.empleadoService.findAllEmpleados(paginationDto, estado, id)
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
-      );
-    }
+    await this.findAreasById(id, true)
+    return this.empleadoService.findAllEmpleados(paginationDto, estado, id)
   }
 
   async obtenerPostulacionesAreas(id: number, estado: boolean, paginationDto: PaginationDto) {
-    try {
-      await this.findAreasById(id, true)
-      return this.postulacionService.findAllPostulaciones(paginationDto, estado, id)
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
-      );
-    }
+    await this.findAreasById(id, true)
+    return this.postulacionService.findAllPostulaciones(paginationDto, estado, id)
   }
 
 }

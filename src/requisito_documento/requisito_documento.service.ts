@@ -1,8 +1,9 @@
-import { 
-  Injectable, 
-  InternalServerErrorException, 
+import {
+  Injectable,
+  InternalServerErrorException,
   NotFoundException,
-  BadRequestException 
+  BadRequestException,
+  HttpException
 } from '@nestjs/common';
 import { and, count, eq } from 'drizzle-orm';
 import { PaginationDto } from 'src/common';
@@ -10,13 +11,12 @@ import { DrizzleService } from 'src/drizzle/drizzle.service';
 import { RequisitoDocumentoTable } from 'src/drizzle/schema/requisito_documento';
 import { CreateRequisitoDocumentoDto } from './dto/create-requisito-documento.dto';
 import { UpdateRequisitoDocumentoDto } from './dto/update-requisito-documento.dto';
+import { BaseDrizzleService } from 'src/drizzle/base_drizzle.service';
 
 @Injectable()
-export class RequisitoDocumentoService {
-  constructor(private readonly drizzleService: DrizzleService) {}
-
-  private get db() {
-    return this.drizzleService.getDb();
+export class RequisitoDocumentoService extends BaseDrizzleService {
+  constructor(drizzleService: DrizzleService) { 
+    super(drizzleService)
   }
 
   async findAllRequisitoDocumentos(paginationDto: PaginationDto, estado: boolean) {
@@ -53,6 +53,7 @@ export class RequisitoDocumentoService {
         },
       };
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         `Ocurrió un error con el sistema: ${error}`,
       );
@@ -80,10 +81,8 @@ export class RequisitoDocumentoService {
 
       return response;
     } catch (error) {
-      if (error instanceof NotFoundException) throw error;
-      throw new InternalServerErrorException(
-        `Ocurrió un error con el sistema: ${error}`,
-      );
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException(error)
     }
   }
 
@@ -155,11 +154,7 @@ export class RequisitoDocumentoService {
         message: 'Requisito documento actualizado correctamente',
       };
     } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException
-      )
-        throw error;
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         `Ocurrió un error con el sistema: ${error}`,
       );
@@ -199,7 +194,7 @@ export class RequisitoDocumentoService {
         message: 'Requisito documento removido correctamente',
       };
     } catch (error) {
-      if (error instanceof NotFoundException) throw error;
+      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException(
         `Ocurrió un error con el sistema: ${error}`,
       );

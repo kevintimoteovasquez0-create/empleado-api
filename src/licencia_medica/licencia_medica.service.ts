@@ -5,17 +5,16 @@ import { DrizzleService } from 'src/drizzle/drizzle.service';
 import { LicenciaMedicaTable } from 'src/drizzle/schema/licencia_medica';
 import { EmpleadoTable } from 'src/drizzle/schema/empleado';
 import { CreateLicenciaMedicaDto } from './dto/create-licencia-medica.dto';
-import { UpdateEstadoLicenciaMedicaDto} from './dto/update-estado-licencia-medica.dto';
+import { UpdateEstadoLicenciaMedicaDto } from './dto/update-estado-licencia-medica.dto';
+import { BaseDrizzleService } from 'src/drizzle/base_drizzle.service';
 
 @Injectable()
-export class LicenciaMedicaService {
+export class LicenciaMedicaService extends BaseDrizzleService {
 
     constructor(
-        private readonly drizzleService: DrizzleService,
-    ) { }
-
-    private get db() {
-        return this.drizzleService.getDb();
+        drizzleService: DrizzleService,
+    ) {
+        super(drizzleService)
     }
 
     async findAllLicenciasMedicas(paginationDto: PaginationDto, estado: boolean) {

@@ -164,6 +164,7 @@ export class UsuarioController {
   }
 
   @Put(':id')
+  @UseInterceptors(FileInterceptor('fotoUsuario'))
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Actualizar usuario',
