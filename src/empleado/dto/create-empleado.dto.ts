@@ -114,7 +114,7 @@ export class CreateEmpleadoDto {
   })
   @IsDate({ message: "El formato de la fecha de ingreso no es válido." })
   @IsNotEmpty({ message: "La fecha de ingreso es un campo requerido." })
-  fecha_ingreso: string;
+  fecha_ingreso: Date;
 
   @ApiProperty({
     description: 'Fecha de nacimiento del empleado',
@@ -124,7 +124,7 @@ export class CreateEmpleadoDto {
   })
   @IsDate({ message: "El formato de la fecha de nacimiento no es válido." })
   @IsNotEmpty({ message: "La fecha de nacimiento es un campo requerido." })
-  fecha_nacimiento: string;
+  fecha_nacimiento: Date;
 
   @ApiProperty({
     description: 'Número de teléfono del empleado',
