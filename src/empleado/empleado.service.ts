@@ -125,7 +125,8 @@ export class EmpleadoService extends BaseDrizzleService{
         .values(empleado)
 
       return {
-        message: "Área creada correctamente"
+        status: "success",
+        message: "Empleado creado correctamente"
       }
 
     } catch (error) {
