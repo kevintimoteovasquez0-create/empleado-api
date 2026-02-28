@@ -111,8 +111,10 @@ export class CreateEmpleadoDto {
     type: String,
     format: 'date',
   })
-  @Transform(({ value }) => value + 'T00:00:00:00Z')
-  @IsDateString({}, { message: "El formato de la fecha de ingreso no es válido." })
+  @IsString()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { 
+    message: "El formato de la fecha de ingreso no es válido.", 
+  })
   @IsNotEmpty({ message: "La fecha de ingreso es un campo requerido." })
   fecha_ingreso: string;
 
