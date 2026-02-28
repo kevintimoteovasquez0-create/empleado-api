@@ -121,7 +121,6 @@ export class CreateEmpleadoDto {
     type: String,
     format: 'date',
   })
-  @Transform(({ value }) => value + 'T00:00:00:00Z')
   @IsDate({ message: "El formato de la fecha de nacimiento no es válido." })
   @IsNotEmpty({ message: "La fecha de nacimiento es un campo requerido." })
   fecha_nacimiento: Date;
