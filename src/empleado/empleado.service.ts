@@ -113,11 +113,16 @@ export class EmpleadoService extends BaseDrizzleService{
         uniqueFields: [
           { field: "numero_documento", column: EmpleadoTable.numero_documento }
         ]
-      })
+      });
+      const empleado= {
+        ...createEmpleadoDto,
+        fecha_ingreso: new Date(createEmpleadoDto.fecha_ingreso),
+        fecha_nacimiento: new Date(createEmpleadoDto.fecha_nacimiento),
+      };
 
       await this.db
         .insert(EmpleadoTable)
-        .values({ ...createEmpleadoDto })
+        .values(empleado)
 
       return {
         message: "Área creada correctamente"
@@ -143,11 +148,18 @@ export class EmpleadoService extends BaseDrizzleService{
         uniqueFields: [
           { field: "numero_documento", column: EmpleadoTable.numero_documento }
         ]
-      })
+      });
+
+      const empleado = {
+        ...UpdateEmpleadoDto,
+        fecha_ingreso: updateEmpleadosDto.fecha_ingreso
+          ? new Date(updateEmpleadosDto.fecha_ingreso)
+          : undefined,
+      }
 
       await this.db
         .update(EmpleadoTable)
-        .set({ ...updateEmpleadosDto })
+        .set(empleado)
         .where(eq(EmpleadoTable.id, id))
 
       return {
