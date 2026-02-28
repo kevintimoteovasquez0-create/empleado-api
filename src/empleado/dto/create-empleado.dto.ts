@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Transform, Type } from "class-transformer";
+import { Transform } from "class-transformer";
 import { IsDate, IsEmail, IsEnum, IsInt, IsNotEmpty, IsOptional, IsPositive, IsString, Length, Matches, MaxLength, ValidateIf } from "class-validator";
 
 export enum DocumentoEnumDto {
@@ -19,7 +19,6 @@ export enum EstadoLegajoEnum {
 }
 
 export class CreateEmpleadoDto {
-  @Type(() => Date)
   @ApiProperty({
     description: 'ID del usuario asociado al empleado',
     example: 12,
